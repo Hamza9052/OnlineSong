@@ -71,13 +71,13 @@ class songVM(): ViewModel() {
     }
 
     fun getname(){
-
+        _isLoading.value = true
         FirebaseFirestore.getInstance().collection("Songs")
             .get()
             .addOnSuccessListener{rsult ->
              rsult.documents.size
                 for (d in rsult){
-                    _isLoading.value = false
+
                     if (d != null ){
                         var doc = d.reference.collection("Categories")
                         doc.get()
@@ -100,13 +100,21 @@ class songVM(): ViewModel() {
 
                                     }
                                 }
+
                                 _Categories.value = currentList
+                                _isLoading.value = false
+                            }
+                            .addOnFailureListener{
+                                _isLoading.value = false
                             }
                     }
                 }
-                _isLoading.value = true
+
                 Log.d("name_type", "getname: ${_Categories.value?.size}")
 
+            }
+            .addOnFailureListener{
+                _isLoading.value = false
             }
 
     }
