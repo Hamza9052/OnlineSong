@@ -36,9 +36,7 @@ class songVM(): ViewModel() {
         @SuppressLint("SuspiciousIndentation")
     fun getSongs(publicId: String,context: Context): String? {
         val config = mutableMapOf<String, Any>()
-        config["cloud_name"] = "dayyltanu"
-        config["api_key"] = "275544193634372"
-        config["api_secret"] = "3qyjZKD3o43_PQCIr9xoM91Lgs0"
+
         MediaManager.init(context, config)
         val cloudinary = Cloudinary(config)
         val signedUrl = cloudinary.url()
@@ -55,9 +53,7 @@ class songVM(): ViewModel() {
     @SuppressLint("SuspiciousIndentation")
     fun getImage(publicId: String,context: Context): String? {
         val config = mutableMapOf<String, Any>()
-        config["cloud_name"] = "dayyltanu"
-        config["api_key"] = "275544193634372"
-        config["api_secret"] = "3qyjZKD3o43_PQCIr9xoM91Lgs0"
+
 
         val cloudinary = Cloudinary(config)
         val signedUrl = cloudinary.url()
