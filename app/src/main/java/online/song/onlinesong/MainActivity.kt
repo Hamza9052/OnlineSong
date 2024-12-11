@@ -82,7 +82,10 @@ fun navigate(
             )
         }
         composable(Screen.Search.route){
-            Search(navController)
+            Search(
+                navController,
+                VM
+            )
         }
         composable(Screen.Favorite.route){
             Favorite(navController)

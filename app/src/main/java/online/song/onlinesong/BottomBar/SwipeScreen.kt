@@ -35,11 +35,11 @@ fun SwipeScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(bottom = paddingValues.calculateBottomPadding()),
-        userScrollEnabled = true
+        userScrollEnabled = false
     ) {page ->
         when (page) {
             0 -> Home(navController = navController,VM)
-            1 -> Search(navController = navController)
+            1 -> Search(navController = navController,VM)
             2 -> Favorite(navController = navController)
 
         }
