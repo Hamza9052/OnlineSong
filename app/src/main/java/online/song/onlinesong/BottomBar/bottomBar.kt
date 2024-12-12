@@ -2,9 +2,13 @@ package online.song.onlinesong.BottomBar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +18,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,59 +48,45 @@ fun bottomBar(
     val coroutineScope = rememberCoroutineScope()
 
     NavigationBar(
-        containerColor = colorResource(R.color.background),
+        containerColor = colorResource(R.color.test1), // Dark background color
         modifier = Modifier
-            .background(
-               color =  Color.Transparent,
-               shape =  RoundedCornerShape(topEnd = 40.dp, topStart = 40.dp),
-            )
-            .shadow(
-                elevation = 30.dp,
-                shape = RoundedCornerShape(topEnd = 40.dp, topStart = 40.dp),
-                clip = false,
-                ambientColor = Color.White,
-                spotColor = Color.White
-            )
+            .height(80.dp)
 
 
     ) {
 
+        bottomIcons.forEachIndexed { index,item->
+            val isSelected = currentRoute == item.title.lowercase()
 
-            bottomIcons.forEachIndexed { index,item->
-                val isSelected = currentRoute == item.title.lowercase()
-
-                NavigationBarItem(
-                    colors =  NavigationBarItemColors(
-                        selectedIconColor = colorResource(R.color.icon),
-                        selectedTextColor = Color.Transparent,
-                        selectedIndicatorColor = Color.Transparent,
-                        unselectedIconColor = colorResource(R.color.unfocus),
-                        unselectedTextColor = Color.Transparent,
-                        disabledIconColor = Color.Transparent,
-                        disabledTextColor = Color.Transparent
-                    ),
-                    selected = isSelected,
-                    onClick = {
-                        coroutineScope.launch {
-                            pagerState.scrollToPage(index) // Scroll pager to the selected page without animation
-                        }
-                        navController.navigate(item.title.lowercase()) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                            contentDescription = item.title
-                        )
+            NavigationBarItem(
+                colors = NavigationBarItemDefaults.colors(
+                    indicatorColor = Color.Transparent,
+                    selectedIconColor = colorResource(R.color.icon),
+                    unselectedIconColor = colorResource(R.color.unfocus)
+                ),
+                selected = isSelected,
+                onClick = {
+                    coroutineScope.launch {
+                        pagerState.scrollToPage(index) // Scroll pager to the selected page without animation
                     }
-                )
-            }
+                    navController.navigate(item.title.lowercase()) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = item.title
+                    )
+                }
+            )
         }
+    }
+
 
 
 

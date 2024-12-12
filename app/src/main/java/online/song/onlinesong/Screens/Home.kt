@@ -14,6 +14,9 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,12 +31,14 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.livedata.observeAsState
@@ -53,8 +58,16 @@ import coil.request.ImageRequest
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import coil3.size.Scale
+import com.cloudinary.android.preprocess.Crop
+import online.song.onlinesong.Events.dataSong
+import java.util.UUID
 
 
 @SuppressLint("UnrememberedMutableState")
@@ -63,11 +76,14 @@ fun Home(
     navController: NavController,
     VM: songVM,
 ) {
+
+
     val names_types = VM.Categories.observeAsState(emptyList<String>())
     var isLoading = VM.isLoading.observeAsState(Boolean)
     LaunchedEffect(Unit) {
         VM.getname()
     }
+
     var songs = listOf<String>(
         "Hamza",
         "Ilias",
@@ -94,7 +110,12 @@ fun Home(
         "Kiwi",
         "Lemon"
     )
+    var data = dataSong()
+    data.list = songs
     val lazyGridState = rememberLazyGridState()
+    val lazyRowState = rememberLazyListState()
+
+
     val scrollOffset = derivedStateOf {
         lazyGridState.firstVisibleItemScrollOffset
     }
@@ -125,19 +146,20 @@ fun Home(
             .fillMaxWidth()
             .background(color = colorResource(R.color.background))
     ) {
-       Spacer(modifier = Modifier.height(Height))
 
+       Spacer(modifier = Modifier.height(Height))
+       
         Text(
             text = "Categories",
             fontWeight = FontWeight.Bold,
             fontSize = 30.sp,
             color = Color.White,
             modifier = Modifier
-                .padding(top = Height, start = Height, bottom =Height )
+                .padding(top = Height, start = text )
                 .alpha(VisibiltyOfText)
         )
 
-      if (isLoading.value == true){
+      if (isLoading.value == true && names_types.value.isEmpty()){
           LazyRow(
               horizontalArrangement = Arrangement.spacedBy(15.dp)
           ) {
@@ -147,69 +169,73 @@ fun Home(
 
           }
 
-      }else{
-          LazyRow(
-              modifier = Modifier
-                  .fillMaxWidth() // Make the LazyRow fill the available width
-                  .height(rowHeight),
-              horizontalArrangement = Arrangement.spacedBy(4.dp)
-          ) {
+      }else if(names_types.value.isNotEmpty()){
 
-              items(
-                  count = names_types.value.size,
-                  key = {index-> names_types.value[index] }
-              ) { index ->
+              LazyRow(
+                  state = lazyRowState,
+                  modifier = Modifier
+                      .fillMaxWidth() // Make the LazyRow fill the available width
+                      .height(rowHeight),
+                  horizontalArrangement = Arrangement.spacedBy(4.dp)
+              ) {
+                  items(
+                      count = Int.MAX_VALUE, // Limit to a very large number
+                  ) { index ->
 
-                  val nameType =  names_types.value[index]
-                  val uriImag = VM.getImage(nameType, navController.context)
-                  val image = rememberAsyncImagePainter(
-                      model = ImageRequest.Builder(navController.context)
-                          .data(uriImag)
-                          .crossfade(true)
-                          .error(R.drawable.error)
-                          .placeholder(R.drawable.error)
-                          .build())
-                  val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
-                  Log.e("Row", "Home:$uriImag ")
-                  AnimatedVisibility(
-                      visible = true,
-                      enter = slideInHorizontally() + fadeIn(),
-                      exit = slideOutHorizontally() + fadeOut()
-                  ) {
-
-                      Box(
-                          modifier = Modifier
-                              .width(100.dp)  // Set fixed width for each item
-                              .padding(start = text)  // Padding around each item
-                              .graphicsLayer(scaleX = scale, scaleY = scale)
+                      val nameType =  names_types.value[index % names_types.value.size]
+                      val uriImag = VM.getImage(nameType, navController.context)
+                      val image = rememberAsyncImagePainter(
+                          model = ImageRequest.Builder(navController.context)
+                              .data(uriImag)
+                              .crossfade(true)
+                              .error(R.drawable.error)
+                              .placeholder(R.drawable.error)
+                              .build())
+                      val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
+                      Log.e("Row", "Home:$uriImag ")
+                      AnimatedVisibility(
+                          visible = true,
+                          enter = slideInHorizontally() + fadeIn(),
+                          exit = slideOutHorizontally() + fadeOut()
                       ) {
 
-                          Item(image, nameType,test)
+                          Box(
+                              modifier = Modifier
+                                  .width(100.dp)  // Set fixed width for each item
+                                  .padding(start = text)  // Padding around each item
+                                  .graphicsLayer(scaleX = scale, scaleY = scale)
+                          ) {
+
+                              Item(image, nameType,test)
+                          }
                       }
+
                   }
 
               }
-          }
+
+
       }
 
         HorizontalDivider(
             thickness = 1.dp,
-            color = colorResource(R.color.icon)
+            color = colorResource(R.color.test)
         )
         LazyVerticalGrid(
             state = lazyGridState,
-            columns = GridCells.Fixed(4),
-        ){
+            columns = GridCells.Fixed(3),
 
+        ){
+            val id = UUID.randomUUID().toString()
 //            items(names_types.value.size) { index ->
 //                val nameType = names_types.value[index]
             items(
-                count = songs.size,
+                count =data.list.size,
                 key = {index->
-                    songs[index]
+                    data.list[index]
                 }
             ) { index ->
-                val nameType = songs[index]
+                val nameType =  data.list[index]
                 val uriImag = VM.getImage(nameType, navController.context)
                 val image = rememberAsyncImagePainter(
                     model = ImageRequest.Builder(navController.context)
@@ -217,15 +243,13 @@ fun Home(
                         .crossfade(true)
                         .error(R.drawable.error)
                         .placeholder(R.drawable.error)
-                        .build()
-                )
-                Log.e("Row", "Home:$uriImag ")
+                        .build())
                 val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
-
+                Log.e("Row", "Home:$uriImag ")
                 AnimatedVisibility(
                     visible = true,
-                    enter = slideInVertically() + fadeIn(),
-                    exit = slideOutVertically() + fadeOut()
+                    enter = slideInHorizontally() + fadeIn(),
+                    exit = slideOutHorizontally() + fadeOut()
                 ) {
                     Box(
                         modifier = Modifier
@@ -238,6 +262,7 @@ fun Home(
                 }
 
             }
+
 
         }
 
@@ -301,7 +326,7 @@ fun Item(
             Text(
                 text = type,
                 color = Color.White,
-                fontSize = 19.sp,
+                fontSize = 14.sp,
                 maxLines = 1,
                 modifier = Modifier.alpha(Height)
             )
@@ -346,7 +371,9 @@ fun Item2(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
+            if (image.state is coil.compose.AsyncImagePainter.State.Loading) {
+                CircularProgressIndicator()
+            }
             Image(
                 painter = image,
                 contentDescription = "Image Item",
@@ -362,7 +389,8 @@ fun Item2(
             Text(
                 text = type,
                 color = Color.White,
-                fontSize = 19.sp,
+                fontSize = 14.sp,
+                minLines = 1
             )
         }
     }
