@@ -2,6 +2,7 @@ package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
 import android.util.Log
+import android.widget.ImageButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -12,6 +13,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -222,6 +224,9 @@ fun Home(
                                 .background(
                                     Color.Transparent
                                 )
+                                .clickable(onClick = {
+
+                                })
                                 .clip(CircleShape)
                                 .alpha(VisibiltyOfText)
                                 .size(80.dp)
