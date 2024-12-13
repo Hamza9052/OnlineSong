@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,13 +26,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
+import androidx.compose.material.ButtonColors
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -54,7 +64,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import coil.size.Scale
 import online.song.onlinesong.Events.dataSong
 import java.util.UUID
 
@@ -162,7 +175,62 @@ fun Home(
 
         }
         else if (names_types.value.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                // Fixed Icon (e.g., "G")
 
+
+                if (test == 0f) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp) // Adjust size as needed
+                            .background(
+                                shape = CircleShape,
+                                color = Color.Transparent
+                            ), // Circle shape
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Button(
+                            onClick = {},
+                            modifier = Modifier
+                                .size(48.dp) ,
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(colorResource(R.color.test))
+                        ) {
+                            Text(
+                                text = "P", color = Color.White, fontSize = 14.sp, maxLines = 1
+                            )
+                        }
+                    }
+                }else{
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                shape = CircleShape,
+                                color = Color.Transparent
+                            )
+                            .alpha(VisibiltyOfText)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.profil),
+                            contentDescription = "Image Item",
+
+                            alignment = Alignment.Center,
+                            modifier = Modifier
+                                .background(
+                                    Color.Transparent
+                                )
+                                .clip(CircleShape)
+                                .alpha(VisibiltyOfText)
+                                .size(80.dp)
+                        )
+                    }
+                }
+
+
+                Spacer(modifier = Modifier.width(8.dp))
             LazyRow(
                 state = lazyRowState,
                 modifier = Modifier
@@ -203,36 +271,48 @@ fun Home(
 
                 }
             }
-            var l = 0
-            LazyColumn(state = lazyGridState) {
+            }
+
+
+            LazyColumn(
+                state = lazyGridState,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
                 items(names_types.value.size) { index ->
                     val names = names_types.value[index]
 
 
                     LaunchedEffect(Unit) {
-                        VM.pop(names_types.value[l])
+                        VM.pop(names_types.value[index])
                     }
-                    if (l == index){
-                        if (l+1 == names_types.value.size){
 
-                        }else{
-                            l++
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceAround,
+                        modifier = Modifier.padding(top = 30.dp, bottom = 8.dp)
+                    ) {
+                        Text(
+                            text = names,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 30.sp,
+                            color = Color.White,
+                        )
+
+                        IconButton(
+                            onClick = {},
+                            ) {
+
+
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "More",
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .padding(bottom = 8.dp),
+                            )
                         }
-                        Log.e("test", "Home: Out of bounds${l}", )
-                    }else{
-
                     }
 
-                    Text(
-                        text = names,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 30.sp,
-                        color = Color.White,
-                        modifier = Modifier
-                            .padding(top = Height, bottom = text)
-                            .alpha(VisibiltyOfText)
-                            .align(Alignment.Start)
-                    )
 
 
                     LazyRow(
@@ -246,7 +326,7 @@ fun Home(
                         }
                         else{
                             Log.e("expe", "Home: ${pop.value[names]} +${names}",)
-                            items(pop.value[names]!!.size) { index ->
+                            items(3) { index ->
 
                                 val nameType = pop.value[names]?.get(index)
                                 val uriImag = VM.getImage(nameType.toString(), navController.context)
