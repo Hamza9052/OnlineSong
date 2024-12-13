@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -53,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.ContentScale
 import online.song.onlinesong.Events.dataSong
 import java.util.UUID
 
@@ -101,7 +103,7 @@ fun Home(
     )
     var data = dataSong()
     data.list = songs
-    val lazyGridState = rememberLazyGridState()
+    val lazyGridState = rememberLazyListState()
     val lazyRowState = rememberLazyListState()
 
 
@@ -109,26 +111,23 @@ fun Home(
         lazyGridState.firstVisibleItemScrollOffset
     }
     val rowHeight by animateDpAsState(
-        targetValue = if (scrollOffset.value > 0) 60.dp else 150.dp,
-        animationSpec = tween(1000)
+        targetValue = if (scrollOffset.value > 0) 60.dp else 150.dp, animationSpec = tween(1000)
     )
     val text by animateDpAsState(
-        targetValue = if (scrollOffset.value > 0) 0.dp else 8.dp,
-        animationSpec = tween(1000)
+        targetValue = if (scrollOffset.value > 0) 0.dp else 8.dp, animationSpec = tween(1000)
     )
     val VisibiltyOfText by animateFloatAsState(
         targetValue = if (scrollOffset.value > 0) 0f else 1f,
         animationSpec = tween(1000),
     )
     val Height by animateDpAsState(
-        targetValue = if (scrollOffset.value > 0) 0.dp else 30.dp,
-        animationSpec = tween(1000)
+        targetValue = if (scrollOffset.value > 0) 0.dp else 30.dp, animationSpec = tween(1000)
     )
     val test by animateFloatAsState(
         targetValue = if (scrollOffset.value > 0) 0f else 1f,
         animationSpec = tween(1000),
     )
-    var name =""
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -138,7 +137,7 @@ fun Home(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-       Spacer(modifier = Modifier.height(Height))
+        Spacer(modifier = Modifier.height(Height))
 
         Text(
             text = "Categories",
@@ -151,102 +150,105 @@ fun Home(
                 .align(alignment = Alignment.Start)
         )
 
-      if (isLoading.value == true && names_types.value.isEmpty()){
-          LazyRow(
-              horizontalArrangement = Arrangement.spacedBy(15.dp)
-          ) {
-              items(10){index->
-                  Process()
-              }
+        if (isLoading.value == true && names_types.value.isEmpty()) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(15.dp)
+            ) {
+                items(10) { index ->
+                    Process()
+                }
 
-          }
+            }
 
-      }else if(names_types.value.isNotEmpty()){
+        }
+        else if (names_types.value.isNotEmpty()) {
 
-              LazyRow(
-                  state = lazyRowState,
-                  modifier = Modifier
-                      .fillMaxWidth() // Make the LazyRow fill the available width
-                      .height(rowHeight),
-                  horizontalArrangement = Arrangement.SpaceBetween
-              ) {
-                  items(
-                      count = Int.MAX_VALUE, // Limit to a very large number
-                  ) { index ->
-
-                      val nameType =  names_types.value[index % names_types.value.size]
-                      val uriImag = VM.getImage(nameType, navController.context)
-                      val image = rememberAsyncImagePainter(
-                          model = ImageRequest.Builder(navController.context)
-                              .data(uriImag)
-                              .crossfade(true)
-                              .error(R.drawable.error)
-                              .placeholder(R.drawable.error)
-                              .build())
-                      val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
-                      Log.e("Row", "Home:$uriImag ")
-
-                      AnimatedVisibility(
-                          visible = true,
-                          enter = slideInHorizontally() + fadeIn(),
-                          exit = slideOutHorizontally() + fadeOut()
-                      ) {
-
-                          Box(
-                              modifier = Modifier
-                                  .width(100.dp)  // Set fixed width for each item
-                                  .padding(start = text)  // Padding around each item
-                                  .graphicsLayer(scaleX = scale, scaleY = scale)
-                          ) {
-
-                              Item(image, nameType,test)
-                          }
-                      }
-
-                  }
-
-              }
-
-
-      }
-
-        for (l in 0 until names_types.value.size ){
-            name = names_types.value[l]
-            Text(
-                text = name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 30.sp,
-                color = Color.White,
+            LazyRow(
+                state = lazyRowState,
                 modifier = Modifier
-                    .padding(top = Height, bottom = text)
-                    .alpha(VisibiltyOfText)
-                    .align(alignment = Alignment.Start)
-            )
-                VM.pop(name)
-            pop.value[name]?.size?.let {
-                if (it > 0){
-                    if (isLoading.value == true ){
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(15.dp)
-                        ) {
-                            items(10){index->
-                                Process()
-                            }
+                    .fillMaxWidth() // Make the LazyRow fill the available width
+                    .height(rowHeight),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                items(
+                    count = names_types.value.size, // Limit to a very large number
+                ) { index ->
 
-                        }
+                    val nameType =  names_types.value[index]
+                    val uriImag = VM.getImage(nameType, navController.context)
+                    val image = rememberAsyncImagePainter(
+                        model = ImageRequest.Builder(navController.context).data(uriImag)
+                            .crossfade(true).error(R.drawable.error).placeholder(R.drawable.error)
+                            .build()
+                    )
+                    val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
+                    Log.e("Row", "Home:$uriImag ")
 
-                    }else{
-                        LazyRow(
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = slideInHorizontally() + fadeIn(),
+                        exit = slideOutHorizontally() + fadeOut()
+                    ) {
+
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth() // Make the LazyRow fill the available width
-                                .height(rowHeight),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .width(100.dp)  // Set fixed width for each item
+                                .padding(start = text)  // Padding around each item
+                                .graphicsLayer(scaleX = scale, scaleY = scale)
                         ) {
-                            items(
-                                count = pop.value.get(name)!!.size , // Limit to a very large number
-                            ) { index ->
 
-                                val nameType =  pop.value.get(name)?.get(index)
+                            Item(image, nameType, test)
+                        }
+                    }
+
+                }
+            }
+            var l = 0
+            LazyColumn(state = lazyGridState) {
+                items(names_types.value.size) { index ->
+                    val names = names_types.value[index]
+
+
+                    LaunchedEffect(Unit) {
+                        VM.pop(names_types.value[l])
+                    }
+                    if (l == index){
+                        if (l+1 == names_types.value.size){
+
+                        }else{
+                            l++
+                        }
+                        Log.e("test", "Home: Out of bounds${l}", )
+                    }else{
+
+                    }
+
+                    Text(
+                        text = names,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 30.sp,
+                        color = Color.White,
+                        modifier = Modifier
+                            .padding(top = Height, bottom = text)
+                            .alpha(VisibiltyOfText)
+                            .align(Alignment.Start)
+                    )
+
+
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+
+                        if (pop.value[names].isNullOrEmpty()){
+                            Log.e("expe", "Home: ${pop.value[names]} +${names}",)
+                        }
+                        else{
+                            Log.e("expe", "Home: ${pop.value[names]} +${names}",)
+                            items(pop.value[names]!!.size) { index ->
+
+                                val nameType = pop.value[names]?.get(index)
                                 val uriImag = VM.getImage(nameType.toString(), navController.context)
                                 val image = rememberAsyncImagePainter(
                                     model = ImageRequest.Builder(navController.context)
@@ -254,34 +256,29 @@ fun Home(
                                         .crossfade(true)
                                         .error(R.drawable.error)
                                         .placeholder(R.drawable.error)
-                                        .build())
+                                        .build()
+                                )
                                 val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
-                                Log.e("Row", "Home:$uriImag ")
+
                                 AnimatedVisibility(
                                     visible = true,
                                     enter = slideInHorizontally() + fadeIn(),
                                     exit = slideOutHorizontally() + fadeOut()
                                 ) {
-
                                     Box(
                                         modifier = Modifier
-                                            .width(100.dp)  // Set fixed width for each item
+                                            .width(150.dp)
                                             .graphicsLayer(scaleX = scale, scaleY = scale)
                                     ) {
-
                                         Item2(image, nameType.toString())
                                     }
                                 }
-
-
                             }
-
                         }
+
                     }
+
                 }
-            }
-            if (l >= names_types.value.size){
-                break
             }
 
         }
@@ -291,26 +288,29 @@ fun Home(
 
 
 
+
+        }
+
+
     }
 
 
-}
+
 
 @Composable
 fun Process(
-    ) {
+) {
 
     Box(
         modifier = Modifier
             .background(
-                Color.Transparent,
-                RoundedCornerShape(12.dp)
+                Color.Transparent, RoundedCornerShape(12.dp)
             )
             .padding(bottom = 14.dp)
     ) {
-           CircularProgressIndicator(
-               color = colorResource(R.color.icon),
-           )
+        CircularProgressIndicator(
+            color = colorResource(R.color.icon),
+        )
     }
 }
 
@@ -325,8 +325,7 @@ fun Item(
     Box(
         modifier = Modifier
             .background(
-                Color.Transparent,
-                RoundedCornerShape(12.dp)
+                Color.Transparent, RoundedCornerShape(12.dp)
             )
             .alpha(Height)
     ) {
@@ -339,6 +338,7 @@ fun Item(
             Image(
                 painter = image,
                 contentDescription = "Image Item",
+                contentScale = ContentScale.Crop,
                 alignment = Alignment.Center,
                 modifier = Modifier
                     .background(
@@ -361,21 +361,19 @@ fun Item(
 
     }
 
-            if (Height == 0f) {
-                Button(
-                    onClick = {},
-                    shape = RoundedCornerShape(40.dp),
-                    modifier = Modifier
-                        .padding(start = 4.dp)
-                        .width(150.dp)
-                ) {
-                    Text(
-                        text = type,
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        maxLines = 1)
-                }
-            }
+    if (Height == 0f) {
+        Button(
+            onClick = {},
+            shape = RoundedCornerShape(40.dp),
+            modifier = Modifier
+                .padding(start = 4.dp)
+                .width(150.dp)
+        ) {
+            Text(
+                text = type, color = Color.White, fontSize = 14.sp, maxLines = 1
+            )
+        }
+    }
 
 
 }
@@ -390,8 +388,7 @@ fun Item2(
     Box(
         modifier = Modifier
             .background(
-                Color.Transparent,
-                RoundedCornerShape(12.dp)
+                Color.Transparent, RoundedCornerShape(12.dp)
             )
             .padding(0.dp)
     ) {
@@ -409,15 +406,12 @@ fun Item2(
                         Color.Transparent
                     )
                     .clip(RoundedCornerShape(20.dp))
-                    .size(80.dp)
+                    .size(120.dp)
             )
 
-            Spacer(Modifier.height(13.dp))
+            Spacer(Modifier.height(5.dp))
             Text(
-                text = type,
-                color = Color.White,
-                fontSize = 14.sp,
-                minLines = 1
+                text = type, color = Color.White, fontSize = 19.sp, minLines = 1
             )
         }
     }
