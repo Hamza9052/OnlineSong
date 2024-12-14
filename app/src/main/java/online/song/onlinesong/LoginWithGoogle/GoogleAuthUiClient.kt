@@ -23,11 +23,7 @@ class GoogleAuthUiClient(
         val result = try {
             oneTapClient.beginSignIn(
                 buildSignInRequest()
-            ).addOnSuccessListener{
-                Toast.makeText(context,"Login Success", Toast.LENGTH_SHORT).show()
-            }.addOnFailureListener{
-                Toast.makeText(context,"Login Failed", Toast.LENGTH_SHORT).show()
-            }.await()
+            ).await()
 
         }catch (e: Exception){
             e.printStackTrace()
@@ -75,7 +71,7 @@ class GoogleAuthUiClient(
         }
     }
 
-     fun getSignedInUser(): UserData? = auth.currentUser?.run{
+    fun getSignedInUser(): UserData? = auth.currentUser?.run{
          UserData(
              userId =uid ,
              userName = displayName,
