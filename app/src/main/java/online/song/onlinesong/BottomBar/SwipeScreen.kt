@@ -12,6 +12,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import online.song.onlinesong.LoginWithGoogle.SignInState
+import online.song.onlinesong.LoginWithGoogle.UserData
 import online.song.onlinesong.Screens.Favorite
 import online.song.onlinesong.Screens.Home
 import online.song.onlinesong.Screens.Search
@@ -24,7 +26,11 @@ fun SwipeScreen(
     pagerState: PagerState,
     paddingValues: PaddingValues,
     navController: NavHostController,
-    VM: songVM
+    VM: songVM,
+    state: SignInState,
+    onSignInClick:() -> Unit,
+    onSignOutClick:() -> Unit,
+    userdata: UserData?
 ) {
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -38,10 +44,9 @@ fun SwipeScreen(
         userScrollEnabled = false
     ) {page ->
         when (page) {
-            0 -> Home(navController = navController,VM)
+            0 -> Home(navController = navController,VM,state,onSignInClick,onSignOutClick,userdata)
             1 -> Search(navController = navController,VM)
             2 -> Favorite(navController = navController)
-
         }
 
     }
