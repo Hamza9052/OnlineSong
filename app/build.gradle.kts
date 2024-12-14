@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
-    id("com.google.devtools.ksp") // Use KSP instead of kapt
+//    id("com.google.devtools.ksp") // Use KSP instead of kapt
 }
 
 android {
@@ -92,8 +92,7 @@ dependencies {
     implementation ("com.google.firebase:firebase-auth-ktx:23.1.0")
     implementation ("com.google.android.gms:play-services-auth:21.3.0")
 
-    implementation("com.google.dagger:hilt-android:2.52")
-    ksp("com.google.dagger:hilt-compiler:2.40.5")
+
 
 
 }

@@ -3,6 +3,7 @@ package online.song.onlinesong.Screens
 import android.annotation.SuppressLint
 import android.util.Log
 import android.widget.ImageButton
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -69,8 +70,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import coil.size.Scale
+import okhttp3.internal.indexOfFirstNonAsciiWhitespace
 import online.song.onlinesong.Events.dataSong
+import online.song.onlinesong.LoginWithGoogle.SignInState
+import online.song.onlinesong.LoginWithGoogle.UserData
 import java.util.UUID
 
 
@@ -79,6 +84,10 @@ import java.util.UUID
 fun Home(
     navController: NavController,
     VM: songVM,
+    state: SignInState,
+    onSignInClick:() -> Unit,
+    onSignOutClick:() -> Unit,
+    userdata: UserData?
 ) {
 
 
@@ -87,8 +96,8 @@ fun Home(
     val pop = VM.ListSingerCata.observeAsState(emptyMap<String, List<String>>())
     LaunchedEffect(Unit) {
         VM.getname()
-
     }
+
 
     var songs = listOf<String>(
         "Hamza",
@@ -195,18 +204,32 @@ fun Home(
                         contentAlignment = Alignment.Center
                     ) {
                         Button(
-                            onClick = {},
+                            onClick = if (userdata == null)onSignInClick else onSignOutClick,
                             modifier = Modifier
                                 .size(48.dp) ,
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(colorResource(R.color.test))
                         ) {
                             Text(
-                                text = "P", color = Color.White, fontSize = 14.sp, maxLines = 1
+                                text = userdata?.userName?.first()?.uppercase().toString() ?: "P",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
                 }else{
+                    val Profil = rememberAsyncImagePainter(
+                        model = ImageRequest.Builder(navController.context)
+                            .data(userdata?.ProfilePicUri)
+                            .crossfade(true)
+                            .error(R.drawable.profil)
+                            .placeholder(R.drawable.error)
+                            .build()
+                    )
+
+
                     Box(
                         modifier = Modifier
                             .background(
@@ -215,22 +238,50 @@ fun Home(
                             )
                             .alpha(VisibiltyOfText)
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.profil),
-                            contentDescription = "Image Item",
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Image(
+                                painter = Profil,
+                                contentDescription = "Image Item",
+                                alignment = Alignment.Center,
+                                modifier = Modifier
+                                    .background(
+                                        Color.Transparent
+                                    )
+                                    .clickable(onClick = if (userdata == null)onSignInClick else onSignOutClick)
+                                    .clip(CircleShape)
+                                    .alpha(VisibiltyOfText)
+                                    .size(80.dp)
+                            )
+                            Spacer(modifier = Modifier.height(5.dp))
+                            var nam = ""
+                            if (userdata?.userName != null){
+                                for (l in 0 until  userdata.userName.length){
 
-                            alignment = Alignment.Center,
-                            modifier = Modifier
-                                .background(
-                                    Color.Transparent
-                                )
-                                .clickable(onClick = {
+                                    if (userdata.userName[l].toString() == " "){
+                                        break
+                                    }
+                                    nam += userdata.userName[l].toString()
+                                }
+                            }
 
-                                })
-                                .clip(CircleShape)
-                                .alpha(VisibiltyOfText)
-                                .size(80.dp)
-                        )
+                            Text(
+                                text = nam.ifEmpty {
+                                    "SignIn"
+                                } ,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = Color.White,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                modifier = Modifier
+                                    .alpha(VisibiltyOfText)
+                            )
+                        }
+
+
                     }
                 }
 
