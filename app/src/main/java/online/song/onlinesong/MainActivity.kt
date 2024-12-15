@@ -10,14 +10,21 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -36,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -56,6 +64,7 @@ import online.song.onlinesong.Screens.Home
 import online.song.onlinesong.Screens.Screen
 import online.song.onlinesong.Screens.Search
 import online.song.onlinesong.Screens.listOfSongs
+import online.song.onlinesong.Screens.playSong
 import online.song.onlinesong.ViewModel.songVM
 import online.song.onlinesong.itemList.bottomIcons
 import online.song.onlinesong.ui.theme.OnlineSongTheme
@@ -105,10 +114,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-
                 Scaffold (
                     bottomBar = {
-                        bottomBar(navController = navController, pagerState = pageState)
+                            bottomBar(navController = navController, pagerState = pageState)
                     }
                 ) {paddingValues ->
                     Column(
@@ -215,7 +223,41 @@ class MainActivity : ComponentActivity() {
                             ){backStackEntry->
                                 val singerName =backStackEntry.arguments?.getString("singerName")?:"Loading..."
                                 val cat =backStackEntry.arguments?.getString("cat")?:"Loading..."
-                                listOfSongs(navController,singerName,VM,cat)
+                                listOfSongs(
+                                    navController, singerName, VM, cat,
+                                    onClick = {}
+                                )
+
+                            }
+                            composable(
+                                "ScreenPlay/{name}/{singerName}",
+                                enterTransition = {
+                                    slideInVertically(
+                                        initialOffsetY = { it },
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
+                                },
+                                exitTransition = {
+                                    slideOutVertically(
+                                        targetOffsetY = { it },
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
+                                }
+                            ){backStackEntry->
+                                val singerName =backStackEntry.arguments?.getString("singerName")?:"Loading..."
+                                val name =backStackEntry.arguments?.getString("name")?:"Loading..."
+                                playSong(
+                                    VM,
+                                    navController,
+                                    singerName,
+                                    name
+                                )
 
                             }
                         }

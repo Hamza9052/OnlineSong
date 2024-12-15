@@ -13,25 +13,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.BottomAppBar
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,40 +37,37 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
-import kotlin.math.log
 
 
 @SuppressLint("SuspiciousIndentation")
 @Composable
 fun listOfSongs(
     navController: NavController,
-    name:String?,
+    names:String?,
     viewModel: songVM,
-    cat:String
+    cat:String,
+    onClick: ()->Unit
 ){
     LaunchedEffect(Unit) {
-        viewModel.listSongs(cat, name.toString())
+        viewModel.listSongs(cat, names.toString())
     }
 
     val songs = viewModel.ListSongs.observeAsState(emptyList<String>())
     val isLoading = viewModel.SongsisLoading.observeAsState(Boolean)
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
-            .data(viewModel.getImage(name!!,navController.context))
+            .data(viewModel.getImage(names!!,navController.context))
             .crossfade(true)
             .error(R.drawable.error)
             .placeholder(R.drawable.error)
@@ -96,10 +88,6 @@ fun listOfSongs(
 
     }
     else{
-
-
-
-
             Column(
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -154,7 +142,7 @@ fun listOfSongs(
                             )
                             .padding(top = 25.dp, bottom = 6.dp)
                             .padding(horizontal = 16.dp),
-                        text = name,
+                        text = names,
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 20.sp,
                     )
@@ -172,7 +160,7 @@ fun listOfSongs(
                     ){index->
                         val name = songs.value[index]
                         Log.d("songslist",name)
-                        ItemSong(image,name)
+                        ItemSong(image,name,onClick,navController,names)
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                 }
@@ -191,11 +179,17 @@ fun listOfSongs(
 @Composable
 fun ItemSong(
     image: AsyncImagePainter,
-    name: String
+    name: String,
+    onClick: () -> Unit,
+    navController: NavController,
+    nameSinger:String
 ){
     Box(
         modifier = Modifier
-            .clickable(onClick = {})
+            .clickable(onClick = {
+                navController.navigate("ScreenPlay/$name/$nameSinger")
+                onClick
+            })
             .background(color = colorResource(R.color.background))
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
