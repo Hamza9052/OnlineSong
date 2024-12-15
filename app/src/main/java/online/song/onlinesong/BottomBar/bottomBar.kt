@@ -69,13 +69,7 @@ fun bottomBar(
                     coroutineScope.launch {
                         pagerState.scrollToPage(index) // Scroll pager to the selected page without animation
                     }
-                    navController.navigate(item.title.lowercase()) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navController.navigate(item.title.lowercase())
                 },
                 icon = {
                     Icon(

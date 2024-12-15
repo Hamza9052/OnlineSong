@@ -93,6 +93,7 @@ fun Home(
 
     val names_types = VM.Categories.observeAsState(emptyList<String>())
     var isLoading = VM.isLoading.observeAsState(Boolean)
+    var CatisLoading = VM.CatisLoading.observeAsState(Boolean)
     val pop = VM.ListSingerCata.observeAsState(emptyMap<String, List<String>>())
     LaunchedEffect(Unit) {
         VM.getname()
@@ -321,7 +322,9 @@ fun Home(
                                 .graphicsLayer(scaleX = scale, scaleY = scale)
                         ) {
 
-                            Item(image, nameType, test)
+                                Item(image, nameType, test)
+
+
                         }
                     }
 
@@ -371,48 +374,55 @@ fun Home(
 
 
 
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
 
-                        if (pop.value[names].isNullOrEmpty()){
-                            Log.e("expe", "Home: ${pop.value[names]} +${names}",)
-                        }
-                        else{
-                            Log.e("expe", "Home: ${pop.value[names]} +${names}",)
-                            items(3) { index ->
+                            if (pop.value[names].isNullOrEmpty()) {
+                                Log.e("expe", "Home: ${pop.value[names]} +${names}",)
+                            } else {
+                                Log.e("expe", "Home: ${pop.value[names]} +${names}",)
+                                items(3) { index ->
 
-                                val nameType = pop.value[names]?.get(index)
-                                val uriImag = VM.getImage(nameType.toString(), navController.context)
-                                val image = rememberAsyncImagePainter(
-                                    model = ImageRequest.Builder(navController.context)
-                                        .data(uriImag)
-                                        .crossfade(true)
-                                        .error(R.drawable.error)
-                                        .placeholder(R.drawable.error)
-                                        .build()
-                                )
-                                val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
+                                    val nameType = pop.value[names]?.get(index)
+                                    val uriImag =
+                                        VM.getImage(nameType.toString(), navController.context)
+                                    val image = rememberAsyncImagePainter(
+                                        model = ImageRequest.Builder(navController.context)
+                                            .data(uriImag)
+                                            .crossfade(true)
+                                            .error(R.drawable.error)
+                                            .placeholder(R.drawable.error)
+                                            .build()
+                                    )
+                                    val scale by animateFloatAsState(
+                                        targetValue = 1f,
+                                        animationSpec = tween(500)
+                                    )
 
-                                AnimatedVisibility(
-                                    visible = true,
-                                    enter = slideInHorizontally() + fadeIn(),
-                                    exit = slideOutHorizontally() + fadeOut()
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .width(150.dp)
-                                            .graphicsLayer(scaleX = scale, scaleY = scale)
+
+                                    AnimatedVisibility(
+                                        visible = true,
+                                        enter = slideInHorizontally() + fadeIn(),
+                                        exit = slideOutHorizontally() + fadeOut()
                                     ) {
-                                        Item2(image, nameType.toString())
+                                        Box(
+                                            modifier = Modifier
+                                                .width(150.dp)
+                                                .graphicsLayer(scaleX = scale, scaleY = scale)
+                                        ) {
+
+                                            Item2(image, nameType.toString(), navController, names)
+
+                                        }
                                     }
                                 }
                             }
+
                         }
 
-                    }
 
                 }
             }
@@ -448,6 +458,7 @@ fun Process(
             color = colorResource(R.color.icon),
         )
     }
+
 }
 
 @Composable
@@ -518,7 +529,8 @@ fun Item(
 fun Item2(
     image: AsyncImagePainter,
     type: String,
-
+    navController: NavController,
+    cat:String
     ) {
 
     Box(
@@ -527,27 +539,35 @@ fun Item2(
                 Color.Transparent, RoundedCornerShape(12.dp)
             )
             .padding(0.dp)
+            .clickable(onClick = {
+                navController.navigate("list/$type/$cat")
+            })
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Image(
-                painter = image,
-                contentDescription = "Image Item",
-                alignment = Alignment.Center,
-                modifier = Modifier
-                    .background(
-                        Color.Transparent
-                    )
-                    .clip(RoundedCornerShape(20.dp))
-                    .size(120.dp)
-            )
+                Image(
+                    painter = image,
+                    contentDescription = "Image Item",
+                    alignment = Alignment.Center,
+                    modifier = Modifier
+                        .background(
+                            Color.Transparent
+                        )
+                        .clip(RoundedCornerShape(20.dp))
+                        .size(120.dp)
+                )
+
+
 
             Spacer(Modifier.height(5.dp))
             Text(
-                text = type, color = Color.White, fontSize = 19.sp, minLines = 1
+                text = type,
+                color = Color.White,
+                fontSize = 19.sp,
+                minLines = 1
             )
         }
     }
