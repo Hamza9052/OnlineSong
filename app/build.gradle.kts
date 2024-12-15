@@ -93,5 +93,8 @@ dependencies {
     implementation ("com.google.android.gms:play-services-auth:21.3.0")
     //ExoPlayer
     implementation ("androidx.media3:media3-exoplayer:1.5.0")
+
+    //Refresh
+    implementation ("com.google.accompanist:accompanist-swiperefresh:0.28.0")
 }
 

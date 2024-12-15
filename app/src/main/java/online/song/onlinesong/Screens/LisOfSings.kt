@@ -24,12 +24,15 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +49,8 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 
@@ -65,6 +70,7 @@ fun listOfSongs(
 
     val songs = viewModel.ListSongs.observeAsState(emptyList<String>())
     val isLoading = viewModel.SongsisLoading.observeAsState(Boolean)
+    val isRefreshing = remember { mutableStateOf(false) }
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
             .data(viewModel.getImage(names!!,navController.context))
@@ -88,6 +94,7 @@ fun listOfSongs(
 
     }
     else{
+
             Column(
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -95,7 +102,9 @@ fun listOfSongs(
                     .fillMaxSize()
                     .fillMaxWidth()
                     .background(color = colorResource(R.color.background))
+
             ) {
+
 
                 Box(
                     modifier = Modifier
@@ -149,21 +158,38 @@ fun listOfSongs(
                 }
                 HorizontalDivider(thickness = (0.7).dp)
                 Spacer(modifier = Modifier.height(20.dp))
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(1)
+                SwipeRefresh(
+                    state = rememberSwipeRefreshState(isRefreshing.value),
+                    onRefresh = {
+                        isRefreshing.value == true
+                        viewModel.listSongs(cat, names.toString())
+                    },
+
+
                 ) {
-                    items(
-                        songs.value.size,
-                        key = {index->
-                            songs.value[index]
+                    if (isLoading.value == true) {
+                        // Show a loading indicator
+                      Process()
+                    }else{
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(1)
+                        ) {
+
+                            items(
+                                songs.value.size,
+                                key = {index->
+                                    songs.value[index]
+                                }
+                            ){index->
+                                val name = songs.value[index]
+                                Log.d("songslist",name)
+                                ItemSong(image,name,onClick,navController,names)
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
                         }
-                    ){index->
-                        val name = songs.value[index]
-                        Log.d("songslist",name)
-                        ItemSong(image,name,onClick,navController,names)
-                        Spacer(modifier = Modifier.width(8.dp))
                     }
                 }
+
             }
 
 
