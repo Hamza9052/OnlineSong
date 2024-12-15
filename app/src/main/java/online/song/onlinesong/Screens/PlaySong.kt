@@ -20,6 +20,7 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -77,7 +78,7 @@ fun playSong(
                 ),
                 title = {
                     Text(
-                        nameSong,
+                        name,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = colorResource(R.color.White),
@@ -85,9 +86,9 @@ fun playSong(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigate(Screen.Home.route) }) {
+                    IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = "Localized description",
                             tint = colorResource(R.color.icon),
                             modifier = Modifier.size(30.dp)
