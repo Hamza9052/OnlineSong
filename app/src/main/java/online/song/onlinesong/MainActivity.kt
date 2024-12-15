@@ -11,6 +11,8 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -28,6 +30,7 @@ import androidx.compose.material.BottomNavigationItem
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -47,6 +50,7 @@ import online.song.onlinesong.Screens.Favorite
 import online.song.onlinesong.Screens.Home
 import online.song.onlinesong.Screens.Screen
 import online.song.onlinesong.Screens.Search
+import online.song.onlinesong.Screens.listOfSongs
 import online.song.onlinesong.ViewModel.songVM
 import online.song.onlinesong.itemList.bottomIcons
 import online.song.onlinesong.ui.theme.OnlineSongTheme
@@ -95,106 +99,70 @@ class MainActivity : ComponentActivity() {
 
                     }
                 }
-                NavHost(
-                    navController = navController,
-                    startDestination = Screen.Home.route
-                ) {
 
-                    composable(Screen.Home.route){
-                        Home(
-                            navController = navController,
-                            VM = VM,
-                            state = state,
-                            onSignInClick = {lifecycleScope.launch{
-                                val signInIntentSender = googleAuthUiClient.signIn()
-
-                                launch.launch(
-                                    IntentSenderRequest.Builder(signInIntentSender ?: return@launch).build()
-                                )
-
-                            }},
-                            onSignOutClick =  {
-                                lifecycleScope.launch{
-                                    googleAuthUiClient.signout()
-                                    Toast.makeText(navController.context,
-                                        "SignOut",
-                                        Toast.LENGTH_LONG).show()
-                                }
-                            },
-                            userdata = googleAuthUiClient.getSignedInUser(),
-                        )
-                    }
-                    composable(Screen.Search.route){
-                        Search(
-                            navController,
-                            VM
-                        )
-                    }
-                    composable(Screen.Favorite.route){
-                        Favorite(navController)
-                    }
-                }
 
                 Scaffold (
                     bottomBar = {
                         bottomBar(navController = navController, pagerState = pageState)
                     }
                 ) {paddingValues ->
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentRoute = navBackStackEntry?.destination?.route
-
-                    HorizontalPager(
-                        state = pageState,
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(bottom = paddingValues.calculateBottomPadding()),
-                        userScrollEnabled = false
-                    ) {page ->
-                        when(page){
-                            0 -> Home(
-                                navController = navController,
-                                VM = VM,
-                                state = state,
-                                onSignInClick = {lifecycleScope.launch{
-                                    val signInIntentSender = googleAuthUiClient.signIn()
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        NavHost(
+                            navController = navController,
+                            startDestination = Screen.Home.route
+                        ) {
 
-                                    launch.launch(
-                                        IntentSenderRequest.Builder(signInIntentSender ?: return@launch).build()
-                                    )
+                            composable(Screen.Home.route){
+                                Home(
+                                    navController = navController,
+                                    VM = VM,
+                                    state = state,
+                                    onSignInClick = {lifecycleScope.launch{
+                                        val signInIntentSender = googleAuthUiClient.signIn()
 
-                                }},
-                                onSignOutClick =  {
-                                    lifecycleScope.launch{
-                                        googleAuthUiClient.signout()
-                                        Toast.makeText(navController.context,
-                                            "SignOut",
-                                            Toast.LENGTH_LONG).show()
-                                    }
-                                },
-                                userdata = googleAuthUiClient.getSignedInUser(),
-                            )
-                            1 ->   Search(
-                                navController,
-                                VM
-                            )
-                            2-> Favorite(navController)
-                        }
+                                        launch.launch(
+                                            IntentSenderRequest.Builder(signInIntentSender ?: return@launch).build()
+                                        )
 
-                    }
-                    LaunchedEffect(pageState) {
-                        snapshotFlow { pageState.currentPage }.collect { page ->
-                            val newRoute = bottomIcons[page].title.lowercase()
-                            if (currentRoute != newRoute) {
-                                navController.navigate(newRoute) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                                    }},
+                                    onSignOutClick =  {
+                                        lifecycleScope.launch{
+                                            googleAuthUiClient.signout()
+                                            Toast.makeText(navController.context,
+                                                "SignOut",
+                                                Toast.LENGTH_LONG).show()
+                                        }
+                                    },
+                                    userdata = googleAuthUiClient.getSignedInUser(),
+                                )
+                            }
+                            composable(Screen.Search.route){
+                                Search(
+                                    navController,
+                                    VM
+                                )
+                            }
+                            composable(Screen.Favorite.route){
+                                Favorite(navController)
+                            }
+                            composable(
+                                "list/{singerName}/{cat}"
+                            ){backStackEntry->
+                                val singerName =backStackEntry.arguments?.getString("singerName")?:"Loading..."
+                                val cat =backStackEntry.arguments?.getString("cat")?:"Loading..."
+                                listOfSongs(navController,singerName,VM,cat)
+
                             }
                         }
                     }
+
+
                 }
             }
         }
