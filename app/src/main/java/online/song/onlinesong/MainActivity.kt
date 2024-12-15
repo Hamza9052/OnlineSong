@@ -10,6 +10,11 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -118,7 +123,21 @@ class MainActivity : ComponentActivity() {
                             startDestination = Screen.Home.route
                         ) {
 
-                            composable(Screen.Home.route){
+                            composable(
+                                Screen.Home.route,
+                                exitTransition = {
+                                    slideOutHorizontally(
+                                        targetOffsetX = { -1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                                    )
+                                },
+                                popEnterTransition = {
+                                    slideInHorizontally(
+                                        initialOffsetX = { -1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                                    )
+                                }
+                            ){
                                 Home(
                                     navController = navController,
                                     VM = VM,
@@ -142,17 +161,57 @@ class MainActivity : ComponentActivity() {
                                     userdata = googleAuthUiClient.getSignedInUser(),
                                 )
                             }
-                            composable(Screen.Search.route){
+                            composable(
+                                Screen.Search.route,
+                                enterTransition = {
+                                    slideInHorizontally(
+                                        initialOffsetX = { 1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                                    )
+                                },
+                                exitTransition = {
+                                    slideOutHorizontally(
+                                        targetOffsetX = { 1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                                    )
+                                }
+                            ){
                                 Search(
                                     navController,
                                     VM
                                 )
                             }
-                            composable(Screen.Favorite.route){
+                            composable(
+                                Screen.Favorite.route,
+                                enterTransition = {
+                                    slideInHorizontally(
+                                        initialOffsetX = { 1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                                    )
+                                },
+                                exitTransition = {
+                                    slideOutHorizontally(
+                                        targetOffsetX = { 1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                                    )
+                                }
+                            ){
                                 Favorite(navController)
                             }
                             composable(
-                                "list/{singerName}/{cat}"
+                                "list/{singerName}/{cat}",
+                                enterTransition = {
+                                    slideInHorizontally(
+                                        initialOffsetX = { 1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                                    )
+                                },
+                                exitTransition = {
+                                    slideOutHorizontally(
+                                        targetOffsetX = { 1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                                    )
+                                }
                             ){backStackEntry->
                                 val singerName =backStackEntry.arguments?.getString("singerName")?:"Loading..."
                                 val cat =backStackEntry.arguments?.getString("cat")?:"Loading..."

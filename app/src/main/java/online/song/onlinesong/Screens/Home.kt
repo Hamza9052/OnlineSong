@@ -2,8 +2,6 @@ package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
 import android.util.Log
-import android.widget.ImageButton
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -28,20 +26,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
-import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material.RadioButton
+import androidx.compose.material.RadioButtonDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -64,19 +59,17 @@ import coil.request.ImageRequest
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
-import coil.size.Scale
-import okhttp3.internal.indexOfFirstNonAsciiWhitespace
+import kotlinx.coroutines.launch
 import online.song.onlinesong.Events.dataSong
 import online.song.onlinesong.LoginWithGoogle.SignInState
 import online.song.onlinesong.LoginWithGoogle.UserData
-import java.util.UUID
 
 
 @SuppressLint("UnrememberedMutableState")
@@ -130,6 +123,7 @@ fun Home(
     data.list = songs
     val lazyGridState = rememberLazyListState()
     val lazyRowState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
 
     val scrollOffset = derivedStateOf {
@@ -251,7 +245,7 @@ fun Home(
                                     .background(
                                         Color.Transparent
                                     )
-                                    .clickable(onClick = if (userdata == null)onSignInClick else onSignOutClick)
+                                    .clickable(onClick = if (userdata == null) onSignInClick else onSignOutClick)
                                     .clip(CircleShape)
                                     .alpha(VisibiltyOfText)
                                     .size(80.dp)
@@ -288,6 +282,8 @@ fun Home(
 
 
                 Spacer(modifier = Modifier.width(8.dp))
+
+
             LazyRow(
                 state = lazyRowState,
                 modifier = Modifier
@@ -295,9 +291,14 @@ fun Home(
                     .height(rowHeight),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+
+
                 items(
                     count = names_types.value.size, // Limit to a very large number
                 ) { index ->
+
+
+
 
                     val nameType =  names_types.value[index]
                     val uriImag = VM.getImage(nameType, navController.context)
@@ -322,7 +323,7 @@ fun Home(
                                 .graphicsLayer(scaleX = scale, scaleY = scale)
                         ) {
 
-                                Item(image, nameType, test)
+                                Item(image, nameType, test,names_types.value)
 
 
                         }
@@ -342,7 +343,9 @@ fun Home(
 
 
                     LaunchedEffect(Unit) {
-                        VM.pop(names_types.value[index])
+                        scope.launch{
+                            VM.pop(names_types.value[index])
+                        }
                     }
 
                     Row(
@@ -380,8 +383,11 @@ fun Home(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
 
-                            if (pop.value[names].isNullOrEmpty()) {
+                            if (pop.value[names].isNullOrEmpty() && CatisLoading.value == true) {
                                 Log.e("expe", "Home: ${pop.value[names]} +${names}",)
+                               items(3){
+                                   Process()
+                               }
                             } else {
                                 Log.e("expe", "Home: ${pop.value[names]} +${names}",)
                                 items(3) { index ->
@@ -422,6 +428,8 @@ fun Home(
                             }
 
                         }
+
+
 
 
                 }
@@ -466,6 +474,7 @@ fun Item(
     image: AsyncImagePainter,
     type: String,
     Height: Float,
+    list: List<String>,
 
     ) {
 
@@ -509,16 +518,28 @@ fun Item(
     }
 
     if (Height == 0f) {
-        Button(
-            onClick = {},
-            shape = RoundedCornerShape(40.dp),
-            modifier = Modifier
-                .padding(start = 4.dp)
-                .width(150.dp)
-        ) {
-            Text(
-                text = type, color = Color.White, fontSize = 14.sp, maxLines = 1
-            )
+        val (selectedOption, onOptionSelected) = remember { mutableStateOf(list[1]) }
+        list.forEach{name->
+            Row(
+                Modifier
+                    .selectable(
+                        selected = (name == selectedOption),
+                        onClick = { onOptionSelected(name) }
+                    )
+                    .background(color = if (name == selectedOption) colorResource(R.color.icon) else colorResource(R.color.background),
+                        shape = RoundedCornerShape(40.dp)
+                    )
+                    .padding(start = 4.dp)
+                    .width(150.dp)
+                    .height(40.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = name, color = Color.White, fontSize = 14.sp, maxLines = 1, textAlign = TextAlign.Center
+                )
+            }
+
         }
     }
 

@@ -83,7 +83,17 @@ fun listOfSongs(
     )
 
     if (isLoading.value == true){
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxSize()
+                .fillMaxWidth()
+                .background(color = colorResource(R.color.background))
+        ) {
         LoadingProgress()
+        }
+
     }
     else{
 
