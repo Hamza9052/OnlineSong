@@ -392,7 +392,7 @@ fun Home(
                                 Log.e("expe", "Home: ${pop.value[names]} +${names}",)
                                 items(3) { index ->
 
-                                    val nameType = pop.value[names]?.get(index)
+                                    val nameType = pop.value[names]?.get(index) ?: "Loading.."
                                     val uriImag =
                                         VM.getImage(nameType.toString(), navController.context)
                                     val image = rememberAsyncImagePainter(

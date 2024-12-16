@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,7 +42,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,11 +54,12 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.launch
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 
 
-@SuppressLint("SuspiciousIndentation")
+@SuppressLint("SuspiciousIndentation", "CoroutineCreationDuringComposition")
 @Composable
 fun listOfSongs(
     navController: NavController,
@@ -64,11 +68,13 @@ fun listOfSongs(
     cat:String,
     onClick: ()->Unit
 ){
-    LaunchedEffect(Unit) {
+
+
+    LaunchedEffect(""){
         viewModel.listSongs(cat, names.toString())
     }
-
-    val songs = viewModel.ListSongs.observeAsState(emptyList<String>())
+    val scope = rememberCoroutineScope()
+    val songs = viewModel.ListSongs.observeAsState(emptyMap<String,List<String>>())
     val isLoading = viewModel.SongsisLoading.observeAsState(Boolean)
     val isRefreshing = remember { mutableStateOf(false) }
     val image = rememberAsyncImagePainter(
@@ -158,15 +164,19 @@ fun listOfSongs(
                 }
                 HorizontalDivider(thickness = (0.7).dp)
                 Spacer(modifier = Modifier.height(20.dp))
+
                 SwipeRefresh(
                     state = rememberSwipeRefreshState(isRefreshing.value),
                     onRefresh = {
                         isRefreshing.value == true
-                        viewModel.listSongs(cat, names.toString())
+                        scope.launch{
+                            viewModel.listSongs(cat, names.toString())
+                        }
                     },
 
 
                 ) {
+
                     if (isLoading.value == true) {
                         // Show a loading indicator
                       Process()
@@ -174,18 +184,34 @@ fun listOfSongs(
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(1)
                         ) {
-
-                            items(
-                                songs.value.size,
-                                key = {index->
-                                    songs.value[index]
+                            if (songs.value[names]?.size != null ){
+                                items(
+                                    songs.value[names]!!.size
+                                ){index->
+                                    var name = songs.value[names]?.get(index) ?:"Laoding.."
+                                    Log.d("songslist",songs.value[names]?.get(index).toString())
+                                    ItemSong(image,name,onClick,navController,names)
+                                    Spacer(modifier = Modifier.width(8.dp))
                                 }
-                            ){index->
-                                val name = songs.value[index]
-                                Log.d("songslist",name)
-                                ItemSong(image,name,onClick,navController,names)
-                                Spacer(modifier = Modifier.width(8.dp))
                             }
+
+
+
+                        }
+                    }
+                    if (songs.value[names]?.size == null ){
+                        Column(
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+
+                            Text(
+                                text ="There's no Songs",
+                                textAlign = TextAlign.Center,
+                                fontSize = 20.sp,
+                                color = colorResource(R.color.icon),
+                                fontWeight = FontWeight.ExtraBold
+                            )
                         }
                     }
                 }
