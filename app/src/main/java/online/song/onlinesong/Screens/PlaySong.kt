@@ -26,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -38,13 +39,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.airbnb.lottie.compose.LottieClipSpec
+import com.airbnb.lottie.compose.LottieClipSpec.Progress
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 
@@ -121,6 +126,7 @@ fun playSong(
                 .background(color = colorResource(R.color.background))
 
         ) {
+            Spacer(modifier = Modifier.weight(0.3f))
             Image(
                 modifier = Modifier.size(250.dp)
                     .clip(RoundedCornerShape(30.dp)),
@@ -131,10 +137,46 @@ fun playSong(
 
             )
 
-
+            Spacer(modifier = Modifier.weight(0.3f))
+            Text(
+                nameSong,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = colorResource(R.color.White),
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.weight(0.3f))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "00:00",
+                    textAlign = TextAlign.Center,
+                    color = colorResource(R.color.unfocus),
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.size(10.dp))
+                Slider(
+                    value = 1f,
+                    onValueChange = {},
+                    valueRange = 0f..100f
+                )
+                Spacer(modifier = Modifier.size(10.dp))
+                Text(
+                    text = "00:00",
+                    textAlign = TextAlign.Center,
+                    color = colorResource(R.color.unfocus),
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+            Spacer(modifier = Modifier.weight(0.3f))
 
 
         }
     }
 
 }
+
