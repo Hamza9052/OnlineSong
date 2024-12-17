@@ -97,5 +97,7 @@ dependencies {
 
     //Refresh
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.28.0")
+    //Preview
+    implementation ("androidx.compose.ui:ui-tooling-preview:1.7.6")
 }
 
