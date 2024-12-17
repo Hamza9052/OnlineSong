@@ -2,7 +2,9 @@ package online.song.onlinesong.ViewModel
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -41,6 +43,7 @@ class songVM() : ViewModel() {
 
 
     private fun play(list: List<String>, context: Context) {
+
 
     }
     private fun pause(list: List<String>, context: Context) {
@@ -95,18 +98,18 @@ class songVM() : ViewModel() {
     val CatisLoading: LiveData<Boolean> get() = _CatisLoading
 
     @SuppressLint("SuspiciousIndentation")
-    fun getSongs(publicId: String, context: Context): String? {
+    fun getSongs(publicId: String, context: Context): Uri {
         val config = mutableMapOf<String, Any>()
         config["cloud_name"] = "dayyltanu"
         config["api_key"] = "275544193634372"
         config["api_secret"] = "3qyjZKD3o43_PQCIr9xoM91Lgs0"
-        MediaManager.init(context, config)
         val cloudinary = Cloudinary(config)
         val signedUrl = cloudinary.url()
             .secure(true)  // Ensure the URL is HTTPS
             .signed(true) // Private song
             .resourcType("video")
             .generate(publicId)
+            .toUri()
 
 
         // Return the signed URL for the image

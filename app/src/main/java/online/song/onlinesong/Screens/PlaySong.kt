@@ -2,6 +2,7 @@ package online.song.onlinesong.Screens
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
@@ -76,6 +78,8 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
@@ -93,8 +97,12 @@ fun playSong(
     name:String,
     nameSong:String
 ){
-    val songs = viewModel.ListSongs.observeAsState(emptyList<String>())
+    val songs = viewModel.ListSongs.observeAsState(emptyMap<String, List<String>>())
     val isLoading = viewModel.SongsisLoading.observeAsState(Boolean)
+     val exoPlayer by lazy { ExoPlayer.Builder(navController.context).build() }
+    val song = viewModel.getSongs(nameSong,navController.context)
+    val mediaItem = MediaItem.fromUri(song)
+    val n = songs.value[name]?.size
     var sliderValue = remember { mutableFloatStateOf(0.5f) }
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
@@ -104,6 +112,17 @@ fun playSong(
             .placeholder(R.drawable.error)
             .build()
     )
+    var nm = 0
+    for (ns in 0 until n!!){
+       var m =  songs.value[name]?.get(ns)
+        if (nameSong == m){
+            nm += ns
+            Log.d("getNumberSong", "playSong: ${nm}+${n}")
+
+        }
+        Log.d("getNumberSong", "playSong: ${nm}+${songs.value[name]?.get(ns)}")
+
+    }
 
 
     Scaffold(
@@ -159,6 +178,7 @@ fun playSong(
                 .background(color = colorResource(R.color.background))
 
         ) {
+            exoPlayer.setMediaItem(mediaItem)
             Spacer(modifier = Modifier.weight(1f))
             Image(
                 modifier = Modifier
@@ -195,7 +215,7 @@ fun playSong(
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
-                               // Thumb size
+                                // Thumb size
                                 .background(Color.White, CircleShape),
 
 
@@ -223,7 +243,10 @@ fun playSong(
                                 modifier = Modifier
                                     .fillMaxWidth(fraction = sliderValue.floatValue) // Active track length based on slider value
                                     .height(4.dp) // Track thickness
-                                    .background(colorResource(R.color.icon), shape = RoundedCornerShape(2.dp)) // Active track color
+                                    .background(
+                                        colorResource(R.color.icon),
+                                        shape = RoundedCornerShape(2.dp)
+                                    ) // Active track color
                             )
                     }
                 )
@@ -254,7 +277,9 @@ fun playSong(
                 horizontalArrangement = Arrangement.SpaceAround
             ){
                 Spacer(modifier = Modifier.weight(0.05f))
-                IconButton(onClick = {}) {
+                IconButton(onClick = {
+
+                }) {
                     Icon(
                         imageVector = Icons.Default.Shuffle,
                         contentDescription = "SkipPrevious",
@@ -275,15 +300,26 @@ fun playSong(
                 }
 
                 Spacer(modifier = Modifier.weight(0.1f))
-
+                val tst = remember { mutableStateOf(false) }
                 Button(
-                    onClick = {},
+                    onClick = {
+                        exoPlayer.prepare()
+                        if (exoPlayer.isPlaying){
+                            exoPlayer.pause()
+                            tst.value = false
+                        }else{
+                            exoPlayer.play()
+                            tst.value = true
+
+                        }
+
+                    },
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.icon)),
                     modifier = Modifier.size(60.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Pause,
+                        imageVector =if(tst.value == true) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = "SkipPrevious",
                         tint = colorResource(R.color.White),
                         modifier = Modifier.size(40.dp)
@@ -292,7 +328,9 @@ fun playSong(
 
                 Spacer(modifier = Modifier.weight(0.1f))
 
-                IconButton(onClick = {}) {
+                IconButton(onClick = {
+
+                }) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "SkipPrevious",
