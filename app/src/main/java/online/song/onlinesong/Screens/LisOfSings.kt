@@ -217,7 +217,7 @@ fun listOfSongs(
 
                                             }
                                         }
-                                    }).wait()
+                                    })
                                     val time = totalTime.value[index].wait()
                                     Log.d("songslist", time.toString())
                                     ItemSong(image,name,onClick,navController,names,
