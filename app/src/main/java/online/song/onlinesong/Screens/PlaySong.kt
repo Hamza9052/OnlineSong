@@ -52,6 +52,7 @@ import androidx.compose.material3.SliderPositions
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -88,7 +90,11 @@ import com.airbnb.lottie.compose.LottieClipSpec
 import com.airbnb.lottie.compose.LottieClipSpec.Progress
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
+import kotlin.math.log
 
+/**
+ * @author Hamza Ouaissa
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun playSong(
@@ -99,9 +105,9 @@ fun playSong(
 ){
     val songs = viewModel.ListSongs.observeAsState(emptyMap<String, List<String>>())
     val isLoading = viewModel.SongsisLoading.observeAsState(Boolean)
-     val exoPlayer by lazy { ExoPlayer.Builder(navController.context).build() }
+     var exoPlayer = ExoPlayer.Builder(navController.context).build()
     val song = viewModel.getSongs(nameSong,navController.context)
-    val mediaItem = MediaItem.fromUri(song)
+    var totalTime = remember { mutableStateOf("") }
     val n = songs.value[name]?.size
     var sliderValue = remember { mutableFloatStateOf(0.5f) }
     val image = rememberAsyncImagePainter(
@@ -112,19 +118,27 @@ fun playSong(
             .placeholder(R.drawable.error)
             .build()
     )
-    var nm = 0
-    for (ns in 0 until n!!){
-       var m =  songs.value[name]?.get(ns)
-        if (nameSong == m){
-            nm += ns
-            Log.d("getNumberSong", "playSong: ${nm}+${n}")
-
-        }
-        Log.d("getNumberSong", "playSong: ${nm}+${songs.value[name]?.get(ns)}")
-
-    }
 
 
+   LaunchedEffect(Unit) {
+       val mediaItem = MediaItem.fromUri(song)
+       exoPlayer.prepare()
+
+       exoPlayer.setMediaItem(mediaItem)
+       exoPlayer.addListener(object : Player.Listener {
+           override fun onPlaybackStateChanged(playbackState: Int) {
+               if (playbackState == Player.STATE_READY) {
+                   // Retrieve and format the total time
+                   totalTime.value  = TotalTime(exoPlayer.duration)
+                   Log.d("TotalTime", totalTime.toString())
+               }
+           }
+       })
+   }
+
+
+
+    Log.d("durection","${exoPlayer.currentPosition}")
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -178,7 +192,7 @@ fun playSong(
                 .background(color = colorResource(R.color.background))
 
         ) {
-            exoPlayer.setMediaItem(mediaItem)
+
             Spacer(modifier = Modifier.weight(1f))
             Image(
                 modifier = Modifier
@@ -265,7 +279,7 @@ fun playSong(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "00:00",
+                    text = totalTime.value,
                     textAlign = TextAlign.Center,
                     color = colorResource(R.color.unfocus),
                     fontSize = 14.sp,
@@ -299,11 +313,16 @@ fun playSong(
                     )
                 }
 
+
+                /**
+
+                 *
+                 */
+
                 Spacer(modifier = Modifier.weight(0.1f))
                 val tst = remember { mutableStateOf(false) }
                 Button(
                     onClick = {
-                        exoPlayer.prepare()
                         if (exoPlayer.isPlaying){
                             exoPlayer.pause()
                             tst.value = false
@@ -312,7 +331,6 @@ fun playSong(
                             tst.value = true
 
                         }
-
                     },
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.icon)),
@@ -360,3 +378,19 @@ fun playSong(
 
 }
 
+fun TotalTime(lon: Long):String{
+    val sec = lon/1000
+    val min = sec / 60
+    val seconds = sec % 60
+    val minutesString = if (min < 10) {
+        "0$min"
+    } else {
+        min.toString()
+    }
+    val secondsString = if (seconds < 10) {
+        "0$seconds"
+    } else {
+        seconds.toString()
+    }
+    return "$minutesString:$secondsString"
+}
