@@ -48,6 +48,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
@@ -55,6 +58,7 @@ import coil.request.ImageRequest
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.launch
+import okhttp3.internal.wait
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 
@@ -70,12 +74,20 @@ fun listOfSongs(
 ){
 
 
-    LaunchedEffect(""){
+    var exoPlayer = ExoPlayer.Builder(navController.context).build()
+
+    exoPlayer.prepare()
+
+
+
+    LaunchedEffect(Unit){
         viewModel.listSongs(cat, names.toString())
+
     }
     val scope = rememberCoroutineScope()
     val songs = viewModel.ListSongs.observeAsState(emptyMap<String,List<String>>())
     val isLoading = viewModel.SongsisLoading.observeAsState(Boolean)
+    var totalTime = remember { mutableStateOf(listOf("")) }
     val isRefreshing = remember { mutableStateOf(false) }
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
@@ -188,9 +200,29 @@ fun listOfSongs(
                                 items(
                                     songs.value[names]!!.size
                                 ){index->
-                                    var name = songs.value[names]?.get(index) ?:"Laoding.."
-                                    Log.d("songslist",songs.value[names]?.get(index).toString())
-                                    ItemSong(image,name,onClick,navController,names)
+
+                                    var name = songs.value[names]?.get(index)
+                                    val song = viewModel.getSongs(name!!,navController.context)
+                                    val mediaItem = MediaItem.fromUri(song)
+                                    exoPlayer.prepare()
+
+                                    exoPlayer.setMediaItem(mediaItem)
+                                    exoPlayer.addListener(object : Player.Listener {
+                                        override fun onPlaybackStateChanged(playbackState: Int) {
+                                            if (playbackState == Player.STATE_READY) {
+                                                // Retrieve and format the total time
+
+                                                totalTime.value = listOf(TTime(exoPlayer.duration))
+                                                Log.d("TotalTime", totalTime.toString())
+
+                                            }
+                                        }
+                                    }).wait()
+                                    val time = totalTime.value[index].wait()
+                                    Log.d("songslist", time.toString())
+                                    ItemSong(image,name,onClick,navController,names,
+                                        time.toString()
+                                    )
                                     Spacer(modifier = Modifier.width(8.dp))
                                 }
                             }
@@ -234,7 +266,8 @@ fun ItemSong(
     name: String,
     onClick: () -> Unit,
     navController: NavController,
-    nameSinger:String
+    nameSinger:String,
+    time: String
 ){
     Box(
         modifier = Modifier
@@ -270,7 +303,7 @@ fun ItemSong(
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "00:00",
+                text = time,
                 textAlign = TextAlign.Center,
                 color = colorResource(R.color.unfocus),
                 fontSize = 14.sp,
@@ -296,4 +329,21 @@ fun LoadingProgress() {
             color = colorResource(R.color.icon),
         )
     }
+}
+
+fun TTime(lon: Long):String{
+    val sec = lon/1000
+    val min = sec / 60
+    val seconds = sec % 60
+    val minutesString = if (min < 10) {
+        "0$min"
+    } else {
+        min.toString()
+    }
+    val secondsString = if (seconds < 10) {
+        "0$seconds"
+    } else {
+        seconds.toString()
+    }
+    return "$minutesString:$secondsString"
 }
