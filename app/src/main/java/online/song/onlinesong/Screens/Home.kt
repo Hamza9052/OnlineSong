@@ -59,6 +59,7 @@ import coil.request.ImageRequest
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -169,15 +170,22 @@ fun Home(
                 .align(alignment = Alignment.Start)
         )
 
-        if (isLoading.value == true && names_types.value.isEmpty()) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(15.dp)
-            ) {
-                items(10) { index ->
-                    Process()
-                }
+        if (isLoading.value == true && names_types.value.isEmpty() ) {
+            Spacer(modifier = Modifier.weight(0.3f))
+               LazyRow(
+                   horizontalArrangement = Arrangement.spacedBy(15.dp)
+               ) {
+                   items(10) { index ->
+                       Process()
+                   }
 
-            }
+               }
+
+               Spacer(modifier = Modifier.weight(1f))
+                   Process()
+            Spacer(modifier = Modifier.weight(1f))
+
+
 
         }
         else if (names_types.value.isNotEmpty()) {
@@ -338,7 +346,14 @@ fun Home(
                 state = lazyGridState,
                 modifier = Modifier.padding(start = 8.dp)
             ) {
-                items(names_types.value.size) { index ->
+                items(
+                    names_types.value.size,
+                    key = {index ->
+                        names_types.value[index].ifEmpty {
+                            "First_key"
+                        }
+                    }
+                ) { index ->
                     val names = names_types.value[index]
 
 
@@ -382,15 +397,14 @@ fun Home(
                                 .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-
-                            if (pop.value[names].isNullOrEmpty() && CatisLoading.value == true) {
+                            var l = 0
                                 Log.e("expe", "Home: ${pop.value[names]} +${names}",)
-                               items(3){
-                                   Process()
-                               }
-                            } else {
-                                Log.e("expe", "Home: ${pop.value[names]} +${names}",)
-                                items(3) { index ->
+                                items(
+                                    3,
+                                    key = {index->
+                                        pop.value[names]?.get(index) ?: l++
+                                    }
+                                ) { index ->
 
                                     val nameType = pop.value[names]?.get(index) ?: "Loading.."
                                     val uriImag =
@@ -425,7 +439,7 @@ fun Home(
                                         }
                                     }
                                 }
-                            }
+
 
                         }
 
@@ -436,13 +450,6 @@ fun Home(
             }
 
         }
-
-
-
-
-
-
-
         }
 
 
