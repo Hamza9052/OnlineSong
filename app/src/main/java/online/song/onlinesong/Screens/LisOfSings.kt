@@ -1,6 +1,7 @@
 package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -74,9 +75,8 @@ fun listOfSongs(
 ){
 
 
-    var exoPlayer = ExoPlayer.Builder(navController.context).build()
 
-    exoPlayer.prepare()
+
 
 
 
@@ -86,8 +86,8 @@ fun listOfSongs(
     }
     val scope = rememberCoroutineScope()
     val songs = viewModel.ListSongs.observeAsState(emptyMap<String,List<String>>())
+    val totalTime = viewModel.totalTime.observeAsState(emptyMap<String,String>())
     val isLoading = viewModel.SongsisLoading.observeAsState(Boolean)
-    var totalTime = remember { mutableStateOf(listOf("")) }
     val isRefreshing = remember { mutableStateOf(false) }
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
@@ -97,6 +97,7 @@ fun listOfSongs(
             .placeholder(R.drawable.error)
             .build()
     )
+
 
     if (isLoading.value == true){
         Column(
@@ -201,25 +202,12 @@ fun listOfSongs(
                                     songs.value[names]!!.size
                                 ){index->
 
-                                    var name = songs.value[names]?.get(index)
-                                    val song = viewModel.getSongs(name!!,navController.context)
-                                    val mediaItem = MediaItem.fromUri(song)
-                                    exoPlayer.prepare()
+                                    var name = songs.value[names]?.get(index) ?: "Loading..."
+                                    scope.launch {
+                                        viewModel.T_Time(navController,name)
+                                    }
+                                    var time = if (index < totalTime.value.size && totalTime.value[name] != null) totalTime.value[name] else "Loading..."
 
-                                    exoPlayer.setMediaItem(mediaItem)
-                                    exoPlayer.addListener(object : Player.Listener {
-                                        override fun onPlaybackStateChanged(playbackState: Int) {
-                                            if (playbackState == Player.STATE_READY) {
-                                                // Retrieve and format the total time
-
-                                                totalTime.value = listOf(TTime(exoPlayer.duration))
-                                                Log.d("TotalTime", totalTime.toString())
-
-                                            }
-                                        }
-                                    })
-                                    val time = totalTime.value[index].wait()
-                                    Log.d("songslist", time.toString())
                                     ItemSong(image,name,onClick,navController,names,
                                         time.toString()
                                     )
@@ -329,21 +317,4 @@ fun LoadingProgress() {
             color = colorResource(R.color.icon),
         )
     }
-}
-
-fun TTime(lon: Long):String{
-    val sec = lon/1000
-    val min = sec / 60
-    val seconds = sec % 60
-    val minutesString = if (min < 10) {
-        "0$min"
-    } else {
-        min.toString()
-    }
-    val secondsString = if (seconds < 10) {
-        "0$seconds"
-    } else {
-        seconds.toString()
-    }
-    return "$minutesString:$secondsString"
 }

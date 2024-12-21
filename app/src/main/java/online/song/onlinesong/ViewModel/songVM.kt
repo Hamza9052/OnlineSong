@@ -9,6 +9,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.navigation.NavController
 import com.cloudinary.Cloudinary
 import com.cloudinary.android.MediaManager
 import com.google.firebase.firestore.FirebaseFirestore
@@ -85,6 +89,10 @@ class songVM() : ViewModel() {
     // Expose the LiveData as a read-only List<String> to the observers.
     val ListSongs: LiveData<Map<String, List<String>>> get() = _ListSongs.map { it.toMap() }
 
+    private val _totalTime = MutableLiveData<MutableMap<String, String>>(mutableMapOf())
+
+    // Expose the LiveData as a read-only List<String> to the observers.
+    val totalTime: LiveData<Map<String, String>> get() = _totalTime.map { it.toMap() }
 
     private val _ListSingerCata = MutableLiveData<MutableMap<String, List<String>>>(mutableMapOf())
 
@@ -344,5 +352,56 @@ class songVM() : ViewModel() {
             }
     }
 
+
+    suspend fun T_Time(navController: NavController,name:String){
+        var exoPlayer = ExoPlayer.Builder(navController.context).build()
+
+            var uriSong = getSongs(name,navController.context)
+            var mediaItem =  MediaItem.fromUri(uriSong)
+            exoPlayer.setMediaItem(mediaItem)
+            exoPlayer.prepare()
+            exoPlayer.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY) {
+                        // Retrieve and format the total time
+                        var formattedTime = TTime(exoPlayer.duration)
+                        val currentList = _totalTime.value ?: mutableMapOf<String, String>()
+
+
+                        if (totalTime.value?.get(name)?.contains(formattedTime) == true ){
+                            formattedTime = ""
+
+                        }else{
+                            Log.e("Total-Time", "${formattedTime} ${name}")
+                            currentList[name] = formattedTime
+                        }
+                        if (formattedTime != ""){
+                            _totalTime.value = currentList // Add the time to the list
+                        }
+                        exoPlayer.release()
+                    }
+                }
+            })
+
+
+    }
+
 }
 
+
+private fun TTime(lon: Long):String{
+    val sec = lon/1000
+    val min = sec / 60
+    val seconds = sec % 60
+    val minutesString = if (min < 10) {
+        "0$min"
+    } else {
+        min.toString()
+    }
+    val secondsString = if (seconds < 10) {
+        "0$seconds"
+    } else {
+        seconds.toString()
+    }
+    return "$minutesString:$secondsString"
+}
