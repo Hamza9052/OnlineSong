@@ -228,7 +228,7 @@ fun Home(
                             .data(userdata?.ProfilePicUri)
                             .crossfade(true)
                             .error(R.drawable.profil)
-                            .placeholder(R.drawable.error)
+                            .placeholder(R.drawable.logo)
                             .build()
                     )
 
@@ -312,7 +312,7 @@ fun Home(
                     val uriImag = VM.getImage(nameType, navController.context)
                     val image = rememberAsyncImagePainter(
                         model = ImageRequest.Builder(navController.context).data(uriImag)
-                            .crossfade(true).error(R.drawable.error).placeholder(R.drawable.error)
+                            .crossfade(true).error(R.drawable.error).placeholder(R.drawable.logo)
                             .build()
                     )
                     val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
@@ -414,7 +414,7 @@ fun Home(
                                             .data(uriImag)
                                             .crossfade(true)
                                             .error(R.drawable.error)
-                                            .placeholder(R.drawable.error)
+                                            .placeholder(R.drawable.logo)
                                             .build()
                                     )
                                     val scale by animateFloatAsState(
