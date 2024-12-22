@@ -1,7 +1,9 @@
 package online.song.onlinesong.Screens
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,6 +40,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.ShuffleOn
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -55,8 +58,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +93,8 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.airbnb.lottie.compose.LottieClipSpec
 import com.airbnb.lottie.compose.LottieClipSpec.Progress
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 import kotlin.math.log
@@ -95,21 +102,35 @@ import kotlin.math.log
 /**
  * @author Hamza Ouaissa
  */
+@SuppressLint("CoroutineCreationDuringComposition")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun playSong(
     viewModel: songVM,
     navController: NavController,
     name:String,
-    nameSong:String
+    nameS:String,
+    cat:String
 ){
     val songs = viewModel.ListSongs.observeAsState(emptyMap<String, List<String>>())
-    val isLoading = viewModel.SongsisLoading.observeAsState(Boolean)
-     var exoPlayer = ExoPlayer.Builder(navController.context).build()
-    val song = viewModel.getSongs(nameSong,navController.context)
-    var totalTime = remember { mutableStateOf("") }
+    val n_s = songs.value[name]
     val n = songs.value[name]?.size
-    var sliderValue = remember { mutableFloatStateOf(0.5f) }
+
+    var exoPlayer = ExoPlayer.Builder(navController.context).build()
+    val shuffleMode = remember { mutableStateOf(exoPlayer.shuffleModeEnabled) }
+    val repeatMod = remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
+    val songList = remember { mutableListOf<MediaItem>() }
+
+
+
+    val isPlaying = remember { mutableStateOf(false) }
+    val currentPosition = remember { mutableStateOf(0L) }
+
+
+
+    var scope = rememberCoroutineScope()
+    var totalTime = remember { mutableStateOf("00:00") }
+    val sliderValue = remember { mutableStateOf(0f) }
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
             .data(viewModel.getImage(name,navController.context))
@@ -118,23 +139,39 @@ fun playSong(
             .placeholder(R.drawable.error)
             .build()
     )
+    val totalDuration = remember { mutableStateOf(0L) }
+    var tim = remember{ mutableStateOf("00:00") }
+    var o = remember{ mutableIntStateOf(0) }
+    for (l in 0 until n_s!!.size){
+        if (n_s[l] == nameS){
+            o.intValue = l
+            break
+        }
+    }
+    LaunchedEffect(isPlaying.value) {
+        while (isPlaying.value) {
+            currentPosition.value = exoPlayer.currentPosition
+            sliderValue.value = currentPosition.value.toFloat() / totalDuration.value
+            delay(500L)
+        }
+    }
+    if (n != null){
+        for (index in 0 until songs.value[name]!!.size){
+            val elemnet = viewModel.getSongs(n_s[index],navController.context)
+            if (songList.contains(MediaItem.fromUri(elemnet)) == false){
+                songList.add(index,MediaItem.fromUri(elemnet))
+            }
 
+            Log.d("index", "playSong: ${n_s[index]}   ->${index}")
+        }
+    }
 
-   LaunchedEffect(Unit) {
-       val mediaItem = MediaItem.fromUri(song)
-       exoPlayer.prepare()
-
-       exoPlayer.setMediaItem(mediaItem)
-       exoPlayer.addListener(object : Player.Listener {
-           override fun onPlaybackStateChanged(playbackState: Int) {
-               if (playbackState == Player.STATE_READY) {
-                   // Retrieve and format the total time
-                   totalTime.value  = TotalTime(exoPlayer.duration)
-                   Log.d("TotalTime", totalTime.toString())
-               }
-           }
-       })
+    LaunchedEffect(Unit) {
+       viewModel.listSongs(cat,name)
    }
+
+
+
 
 
 
@@ -157,7 +194,10 @@ fun playSong(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = {
+                        navController.navigate("list/$name/$cat")
+                        o.intValue = 0
+                    }) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = "Localized description",
@@ -190,7 +230,6 @@ fun playSong(
                 .fillMaxSize()
                 .fillMaxWidth()
                 .background(color = colorResource(R.color.background))
-
         ) {
 
             Spacer(modifier = Modifier.weight(1f))
@@ -207,7 +246,7 @@ fun playSong(
 
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                nameSong,
+                n_s[o.intValue],
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = colorResource(R.color.White),
@@ -220,19 +259,19 @@ fun playSong(
             ){
 
                 Slider(
-                    value = sliderValue.floatValue,
+                    value = sliderValue.value,
                     onValueChange = {
-                        sliderValue.floatValue = it
+                        sliderValue.value = it
+                        exoPlayer.seekTo((it * totalDuration.value).toLong())
                                     },
                     valueRange = 0f..1f,
+
                     thumb = {
                         Box(
                             modifier = Modifier
                                 .size(14.dp)
                                 // Thumb size
                                 .background(Color.White, CircleShape),
-
-
                         )
 
                     },
@@ -243,26 +282,7 @@ fun playSong(
                         disabledThumbColor = Color.Transparent
                     ),
                     modifier = Modifier
-                        .weight(1f),
-                    track = {
-
-                            // Custom track rendering
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(4.dp) // Track thickness
-                                    .background(Color.DarkGray, shape = RoundedCornerShape(2.dp)) // Track color and rounded corners
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(fraction = sliderValue.floatValue) // Active track length based on slider value
-                                    .height(4.dp) // Track thickness
-                                    .background(
-                                        colorResource(R.color.icon),
-                                        shape = RoundedCornerShape(2.dp)
-                                    ) // Active track color
-                            )
-                    }
+                        .weight(1f)
                 )
             }
 
@@ -270,8 +290,11 @@ fun playSong(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                scope.launch{
+                  tim.value =  time(exoPlayer.currentPosition,exoPlayer.isPlaying)
+                }
                 Text(
-                    text = "00:00",
+                    text =tim.value,
                     textAlign = TextAlign.Center,
                     color = colorResource(R.color.unfocus),
                     fontSize = 14.sp,
@@ -290,21 +313,62 @@ fun playSong(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceAround
             ){
+
+                exoPlayer.setMediaItem(songList[o.intValue])
+                exoPlayer.prepare()
+                exoPlayer.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_READY) {
+                            // Retrieve and format the total time
+                            totalTime.value  = TotalTime(exoPlayer.duration)
+                            totalDuration.value = exoPlayer.duration
+                            Log.d("TotalTime", totalTime.toString())
+                        }
+
+                    }
+
+                    override fun onIsPlayingChanged(isPlayin: Boolean) {
+                        isPlaying.value = isPlayin
+                    }
+                    override fun onRepeatModeChanged(repeatMode: Int) {
+                        repeatMod.intValue = repeatMode
+                    }
+                    override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                        shuffleMode.value = shuffleModeEnabled
+                    }
+
+                })
                 Spacer(modifier = Modifier.weight(0.05f))
                 IconButton(onClick = {
-
+                    exoPlayer.shuffleModeEnabled = !exoPlayer.shuffleModeEnabled
                 }) {
                     Icon(
-                        imageVector = Icons.Default.Shuffle,
+                        imageVector = if (shuffleMode.value == false)
+                            Icons.Default.Shuffle
+                        else Icons.Default.ShuffleOn,
                         contentDescription = "SkipPrevious",
-                        tint = colorResource(R.color.White),
+                        tint =if (exoPlayer.shuffleModeEnabled == false)
+                            colorResource(R.color.White)
+                        else colorResource(R.color.DeepPink)
+                        ,
                         modifier = Modifier.size(30.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.weight(0.3f))
 
-                IconButton(onClick = {}) {
+
+                IconButton(onClick = {
+
+                    if (exoPlayer.currentMediaItemIndex == 0) {
+                        o.intValue = songList.size - 1
+                    } else {
+                        exoPlayer.seekToPrevious()
+                        o.intValue =- 1
+                    }
+                    Log.d("index", "playSong: ${o}   ->${exoPlayer.currentMediaItemIndex}")
+                })
+                {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
                         contentDescription = "SkipPrevious",
@@ -313,23 +377,15 @@ fun playSong(
                     )
                 }
 
-
-                /**
-
-                 *
-                 */
-
                 Spacer(modifier = Modifier.weight(0.1f))
-                val tst = remember { mutableStateOf(false) }
+
                 Button(
                     onClick = {
-                        if (exoPlayer.isPlaying){
-                            exoPlayer.pause()
-                            tst.value = false
-                        }else{
-                            exoPlayer.play()
-                            tst.value = true
 
+                        if (exoPlayer.isPlaying) {
+                            exoPlayer.pause()
+                        } else {
+                            exoPlayer.play()
                         }
                     },
                     shape = CircleShape,
@@ -337,8 +393,8 @@ fun playSong(
                     modifier = Modifier.size(60.dp)
                 ) {
                     Icon(
-                        imageVector =if(tst.value == true) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "SkipPrevious",
+                        imageVector =if(exoPlayer.isPlaying == true) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = "Play/Pause",
                         tint = colorResource(R.color.White),
                         modifier = Modifier.size(40.dp)
                     )
@@ -347,11 +403,19 @@ fun playSong(
                 Spacer(modifier = Modifier.weight(0.1f))
 
                 IconButton(onClick = {
-
-                }) {
+                    if (exoPlayer.currentMediaItemIndex == exoPlayer.mediaItemCount - 1) {
+                        exoPlayer.seekTo(0)
+                        o.intValue = 0
+                    } else {
+                        exoPlayer.seekToNext()
+                        o.value += 1
+                    }
+                    Log.d("index", "playSong: ${o}   ->${exoPlayer.currentMediaItemIndex}")
+                })
+                {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
-                        contentDescription = "SkipPrevious",
+                        contentDescription = "SkipNext",
                         tint = colorResource(R.color.White),
                         modifier = Modifier.size(30.dp)
                     )
@@ -359,11 +423,22 @@ fun playSong(
 
                 Spacer(modifier = Modifier.weight(0.3f))
 
-                IconButton(onClick = {}) {
+                IconButton(onClick = {
+                    if (exoPlayer.repeatMode == repeatMod.intValue) {
+                        repeatMod.intValue = Player.REPEAT_MODE_ONE
+                        exoPlayer.repeatMode = repeatMod.intValue
+                    } else {
+                        repeatMod.intValue = Player.REPEAT_MODE_OFF
+                        exoPlayer.repeatMode =  repeatMod.intValue
+                    }
+                }) {
                     Icon(
                         imageVector = Icons.Default.RepeatOne,
-                        contentDescription = "SkipPrevious",
-                        tint = colorResource(R.color.White),
+                        contentDescription = "Repeat Song",
+                        tint = if (exoPlayer.repeatMode == Player.REPEAT_MODE_OFF)
+                            colorResource(R.color.White)
+                        else colorResource(R.color.DeepPink)
+                        ,
                         modifier = Modifier.size(30.dp)
                     )
                 }
@@ -393,4 +468,31 @@ fun TotalTime(lon: Long):String{
         seconds.toString()
     }
     return "$minutesString:$secondsString"
+}
+
+suspend fun time(lon: Long,boolean: Boolean):String{
+    val sec = lon/1000
+    var min:Long = 0
+    var seconds:Long = 0
+    while (boolean == true){
+        seconds += sec % 60
+        if (seconds.toInt() == 60){
+            min += 1
+            seconds = 0
+        }else{
+            seconds += sec % 60
+        }
+        delay(1000)
+    }
+    val minutesString = if (min < 10) {
+        "0$min"
+    } else {
+        min.toString()
+    }
+    val secondsString = if (seconds < 10) {
+        "0$seconds"
+    } else {
+        seconds.toString()
+    }
+    return "minutesString:secondsString"
 }
