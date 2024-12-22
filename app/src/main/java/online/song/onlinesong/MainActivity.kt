@@ -230,7 +230,7 @@ class MainActivity : ComponentActivity() {
 
                             }
                             composable(
-                                "ScreenPlay/{name}/{singerName}",
+                                "ScreenPlay/{name}/{singerName}/{cat}",
                                 enterTransition = {
                                     slideInVertically(
                                         initialOffsetY = { it },
@@ -252,11 +252,13 @@ class MainActivity : ComponentActivity() {
                             ){backStackEntry->
                                 val singerName =backStackEntry.arguments?.getString("singerName")?:"Loading..."
                                 val name =backStackEntry.arguments?.getString("name")?:"Loading..."
+                                val cat =backStackEntry.arguments?.getString("cat")?:"Loading..."
                                 playSong(
                                     VM,
                                     navController,
                                     singerName,
-                                    name
+                                    name,
+                                    cat
                                 )
 
                             }
