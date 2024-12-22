@@ -9,6 +9,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -16,7 +17,9 @@ import androidx.navigation.NavController
 import com.cloudinary.Cloudinary
 import com.cloudinary.android.MediaManager
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.tasks.await
@@ -24,6 +27,7 @@ import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.LoginWithGoogle.SignInState
 import online.song.onlinesong.LoginWithGoogle.SignResult
 import kotlin.collections.contains
+import kotlin.text.toLong
 import kotlin.toString
 
 class songVM() : ViewModel() {
@@ -33,32 +37,33 @@ class songVM() : ViewModel() {
     val state = _state.asStateFlow()
 
 
-
-    fun Action(event: SongEvent,context: Context){
-        when(event){
-            is SongEvent.Play -> play(event.list,context)
-            is SongEvent.Pause -> pause(event.list,context)
-            is SongEvent.Stop -> stop(event.list,context)
-            is SongEvent.Next -> next(event.list,context)
-            is SongEvent.Prev -> prev(event.list,context)
+    fun Action(event: SongEvent, context: Context) {
+        when (event) {
+            is SongEvent.Play -> play(event.list, context)
+            is SongEvent.Pause -> pause(event.list, context)
+            is SongEvent.Stop -> stop(event.list, context)
+            is SongEvent.Next -> next(event.list, context)
+            is SongEvent.Prev -> prev(event.list, context)
         }
     }
 
 
-
     private fun play(list: List<String>, context: Context) {
 
-
     }
+
     private fun pause(list: List<String>, context: Context) {
 
     }
+
     private fun stop(list: List<String>, context: Context) {
 
     }
+
     private fun next(list: List<String>, context: Context) {
 
     }
+
     private fun prev(list: List<String>, context: Context) {
 
     }
@@ -77,6 +82,14 @@ class songVM() : ViewModel() {
             SignInState()
         }
     }
+    private var _currentTime = MutableLiveData(0L) // Current position in milliseconds
+    val currentTime: LiveData<Long> get() = _currentTime
+
+    private var _duration = MutableLiveData(0L) // Duration in milliseconds
+    val duration: LiveData<Long> get() = _duration
+
+    private var _isPlaying = MutableLiveData(false) // Play/Pause state
+    val isPlaying: LiveData<Boolean> get() = _isPlaying
 
 
     private val _Categories = MutableLiveData<MutableList<String>>(mutableListOf())
@@ -280,6 +293,7 @@ class songVM() : ViewModel() {
             .get()
             .addOnSuccessListener { rsult ->
                 rsult.documents.size
+
                 for (d in rsult) {
                     if (d != null) {
                         var doc = d.reference.collection("Categories")
@@ -293,22 +307,28 @@ class songVM() : ViewModel() {
                                             for (doc in res) {
                                                 val singer = doc.get("name_singer")
                                                 Log.e("songs", "Singer: ${singer}+${Singer}")
-                                                if (singer.toString() == Singer){
+                                                if (singer.toString() == Singer) {
                                                     val sing = doc.reference.collection(Singer)
                                                     Log.e("songs", "Singer: ${sing}")
                                                     sing.get()
                                                         .addOnSuccessListener { docs ->
                                                             val currentList = _ListSongs.value
                                                                 ?: mutableMapOf<String, List<String>>()
-                                                            val list = currentList[Singer]?.toMutableList()
-                                                                ?: mutableListOf()
+                                                            val list =
+                                                                currentList[Singer]?.toMutableList()
+                                                                    ?: mutableListOf()
 
-                                                                Log.e("songs", "Singer: ${docs.documents.size}")
+                                                            Log.e(
+                                                                "songs",
+                                                                "Singer: ${docs.documents.size}"
+                                                            )
                                                             for (doc in docs) {
                                                                 Log.e("songs", "Singer: $doc")
                                                                 var song = doc.get("song_name")
 
-                                                                if (!ListSongs.value?.get(Singer).isNullOrEmpty()) {
+                                                                if (!ListSongs.value?.get(Singer)
+                                                                        .isNullOrEmpty()
+                                                                ) {
                                                                     val existingList =
                                                                         ListSongs.value!![Singer]
                                                                             ?: emptyList()
@@ -317,7 +337,7 @@ class songVM() : ViewModel() {
                                                                     }
 
                                                                 }
-                                                                if (song.toString().isNotEmpty()){
+                                                                if (song.toString().isNotEmpty()) {
                                                                     list.add(song.toString())
                                                                     currentList[Singer] = list
                                                                 }
@@ -331,7 +351,6 @@ class songVM() : ViewModel() {
                                                             _SongsisLoading.value = false
                                                         }
                                                 }
-
 
 
                                             }
@@ -352,45 +371,77 @@ class songVM() : ViewModel() {
             }
     }
 
-
-    suspend fun T_Time(navController: NavController,name:String){
+    suspend fun T_Time(navController: NavController, name: String) {
         var exoPlayer = ExoPlayer.Builder(navController.context).build()
 
-            var uriSong = getSongs(name,navController.context)
-            var mediaItem =  MediaItem.fromUri(uriSong)
-            exoPlayer.setMediaItem(mediaItem)
-            exoPlayer.prepare()
-            exoPlayer.addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_READY) {
-                        // Retrieve and format the total time
-                        var formattedTime = TTime(exoPlayer.duration)
-                        val currentList = _totalTime.value ?: mutableMapOf<String, String>()
+        var uriSong = getSongs(name, navController.context)
+        var mediaItem = MediaItem.fromUri(uriSong)
+        exoPlayer.setMediaItem(mediaItem)
+        exoPlayer.prepare()
+        exoPlayer.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    // Retrieve and format the total time
+                    var formattedTime = TTime(exoPlayer.duration)
+                    val currentList = _totalTime.value ?: mutableMapOf<String, String>()
 
 
-                        if (totalTime.value?.get(name)?.contains(formattedTime) == true ){
-                            formattedTime = ""
+                    if (totalTime.value?.get(name)?.contains(formattedTime) == true) {
+                        formattedTime = ""
 
-                        }else{
-                            Log.e("Total-Time", "${formattedTime} ${name}")
-                            currentList[name] = formattedTime
-                        }
-                        if (formattedTime != ""){
-                            _totalTime.value = currentList // Add the time to the list
-                        }
-                        exoPlayer.release()
+                    } else {
+                        Log.e("Total-Time", "${formattedTime} ${name}")
+                        currentList[name] = formattedTime
                     }
+                    if (formattedTime != "") {
+                        _totalTime.value = currentList // Add the time to the list
+                    }
+                    exoPlayer.release()
                 }
-            })
+            }
+        })
 
 
     }
 
+    // Method to initialize ExoPlayer's data
+    suspend fun initializePlayer(exoPlayer: ExoPlayer) {
+
+        // Update duration when the media loads
+        _duration.value = exoPlayer.duration.coerceAtLeast(0L)
+
+        // Timer loop
+        while (true) {
+            if (_isPlaying.value == true) {
+                _currentTime.value = exoPlayer.currentPosition // Update current position
+            }
+            delay(1000L) // Update every second
+        }
+
+    }
+
+    // Method to toggle play/pause
+    fun togglePlayPause(exoPlayer: ExoPlayer) {
+        if (exoPlayer.isPlaying) {
+            exoPlayer.pause()
+            _isPlaying.value = false
+        } else {
+            exoPlayer.play()
+            _isPlaying.value = true
+        }
+    }
+
+    // Method to update ExoPlayer's position via slider
+    fun seekTo(position: Float, exoPlayer: ExoPlayer) {
+        val seekPosition = (position * _duration.value!!.toFloat()).toLong()
+        exoPlayer.seekTo(seekPosition)
+        _currentTime.value = seekPosition
+    }
 }
 
 
-private fun TTime(lon: Long):String{
-    val sec = lon/1000
+private fun TTime(lon: Long): String {
+    val sec = lon / 1000
     val min = sec / 60
     val seconds = sec % 60
     val minutesString = if (min < 10) {
@@ -405,3 +456,10 @@ private fun TTime(lon: Long):String{
     }
     return "$minutesString:$secondsString"
 }
+
+
+
+// I need current index of song
+
+
+
