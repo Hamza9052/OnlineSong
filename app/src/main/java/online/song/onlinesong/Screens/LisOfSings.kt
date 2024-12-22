@@ -94,7 +94,7 @@ fun listOfSongs(
             .data(viewModel.getImage(names!!,navController.context))
             .crossfade(true)
             .error(R.drawable.error)
-            .placeholder(R.drawable.error)
+            .placeholder(R.drawable.logo)
             .build()
     )
 
