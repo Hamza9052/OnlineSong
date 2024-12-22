@@ -206,10 +206,10 @@ fun listOfSongs(
                                     scope.launch {
                                         viewModel.T_Time(navController,name)
                                     }
-                                    var time = if (index < totalTime.value.size && totalTime.value[name] != null) totalTime.value[name] else "Loading..."
+                                    var time = if (index < totalTime.value.size && totalTime.value[name] != null) totalTime.value[name] else "00:00"
 
                                     ItemSong(image,name,onClick,navController,names,
-                                        time.toString()
+                                        time.toString(),cat
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                 }
@@ -255,13 +255,14 @@ fun ItemSong(
     onClick: () -> Unit,
     navController: NavController,
     nameSinger:String,
-    time: String
+    time: String,
+    cat: String
 ){
     Box(
         modifier = Modifier
             .clickable(onClick = {
-                navController.navigate("ScreenPlay/$name/$nameSinger")
-                onClick
+                navController.navigate("ScreenPlay/$name/$nameSinger/$cat")
+                onClick()
             })
             .background(color = colorResource(R.color.background))
             .fillMaxWidth()
