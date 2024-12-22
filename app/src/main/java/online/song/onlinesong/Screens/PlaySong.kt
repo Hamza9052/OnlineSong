@@ -1,39 +1,24 @@
 package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.AppBarDefaults
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Colors
 import androidx.compose.material.Icon
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
@@ -46,18 +31,13 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RangeSliderState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderColors
-import androidx.compose.material3.SliderPositions
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,39 +45,26 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import com.airbnb.lottie.compose.LottieClipSpec
-import com.airbnb.lottie.compose.LottieClipSpec.Progress
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
-import kotlin.math.log
 
 /**
  * @author Hamza Ouaissa
@@ -123,10 +90,12 @@ fun playSong(
 
 
 
-    val isPlaying = remember { mutableStateOf(false) }
+
     val currentPosition = remember { mutableStateOf(0L) }
 
-
+    var currentTime = viewModel.currentTime.observeAsState()
+    var duration = viewModel.duration.observeAsState()
+    var isPlaying = viewModel.isPlaying.observeAsState()
 
     var scope = rememberCoroutineScope()
     var totalTime = remember { mutableStateOf("00:00") }
@@ -136,7 +105,7 @@ fun playSong(
             .data(viewModel.getImage(name,navController.context))
             .crossfade(true)
             .error(R.drawable.error)
-            .placeholder(R.drawable.error)
+            .placeholder(R.drawable.logo)
             .build()
     )
     val totalDuration = remember { mutableStateOf(0L) }
@@ -148,8 +117,9 @@ fun playSong(
             break
         }
     }
-    LaunchedEffect(isPlaying.value) {
-        while (isPlaying.value) {
+
+    LaunchedEffect(exoPlayer) {
+        while (exoPlayer.isPlaying) {
             currentPosition.value = exoPlayer.currentPosition
             sliderValue.value = currentPosition.value.toFloat() / totalDuration.value
             delay(500L)
@@ -169,7 +139,11 @@ fun playSong(
     LaunchedEffect(Unit) {
        viewModel.listSongs(cat,name)
    }
-
+    LaunchedEffect(exoPlayer) {
+        scope.launch{
+            viewModel.initializePlayer(exoPlayer)
+        }
+    }
 
 
 
@@ -258,32 +232,33 @@ fun playSong(
 
             ){
 
-                Slider(
-                    value = sliderValue.value,
-                    onValueChange = {
-                        sliderValue.value = it
-                        exoPlayer.seekTo((it * totalDuration.value).toLong())
-                                    },
-                    valueRange = 0f..1f,
+                duration.value?.let {
+                    Slider(
+                        value =  if (it > 0) currentTime.value!!.toFloat() / duration.value!! else 0f,
+                        onValueChange = {
+                            viewModel.seekTo(it, exoPlayer)
+                        },
+                        valueRange = 0f..1f,
 
-                    thumb = {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                // Thumb size
-                                .background(Color.White, CircleShape),
-                        )
+                        thumb = {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    // Thumb size
+                                    .background(Color.White, CircleShape),
+                            )
 
-                    },
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = colorResource(R.color.icon),
-                        inactiveTrackColor = Color.DarkGray,
-                        thumbColor = Color.Transparent,
-                        disabledThumbColor = Color.Transparent
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                )
+                        },
+                        colors = SliderDefaults.colors(
+                            activeTrackColor = colorResource(R.color.icon),
+                            inactiveTrackColor = Color.DarkGray,
+                            thumbColor = Color.Transparent,
+                            disabledThumbColor = Color.Transparent
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                    )
+                }
             }
 
             Row(
@@ -291,10 +266,10 @@ fun playSong(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 scope.launch{
-                  tim.value =  time(exoPlayer.currentPosition,exoPlayer.isPlaying)
+
                 }
                 Text(
-                    text =tim.value,
+                    text =time(currentTime.value),
                     textAlign = TextAlign.Center,
                     color = colorResource(R.color.unfocus),
                     fontSize = 14.sp,
@@ -327,9 +302,6 @@ fun playSong(
 
                     }
 
-                    override fun onIsPlayingChanged(isPlayin: Boolean) {
-                        isPlaying.value = isPlayin
-                    }
                     override fun onRepeatModeChanged(repeatMode: Int) {
                         repeatMod.intValue = repeatMode
                     }
@@ -381,19 +353,14 @@ fun playSong(
 
                 Button(
                     onClick = {
-
-                        if (exoPlayer.isPlaying) {
-                            exoPlayer.pause()
-                        } else {
-                            exoPlayer.play()
-                        }
+                        viewModel.togglePlayPause(exoPlayer)
                     },
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.icon)),
                     modifier = Modifier.size(60.dp)
                 ) {
                     Icon(
-                        imageVector =if(exoPlayer.isPlaying == true) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        imageVector =if(isPlaying.value == true) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = "Play/Pause",
                         tint = colorResource(R.color.White),
                         modifier = Modifier.size(40.dp)
@@ -470,29 +437,20 @@ fun TotalTime(lon: Long):String{
     return "$minutesString:$secondsString"
 }
 
-suspend fun time(lon: Long,boolean: Boolean):String{
-    val sec = lon/1000
-    var min:Long = 0
-    var seconds:Long = 0
-    while (boolean == true){
-        seconds += sec % 60
-        if (seconds.toInt() == 60){
-            min += 1
-            seconds = 0
-        }else{
-            seconds += sec % 60
-        }
-        delay(1000)
-    }
-    val minutesString = if (min < 10) {
-        "0$min"
+ fun time(lon: Long?):String{
+    val sec = lon!!/1000
+    val minutes = (sec / 60) % 60
+    var seconds = sec % 60
+
+    val minutesString = if (minutes < 10) {
+        "0$minutes"
     } else {
-        min.toString()
+        minutes.toString()
     }
     val secondsString = if (seconds < 10) {
         "0$seconds"
     } else {
         seconds.toString()
     }
-    return "minutesString:secondsString"
+    return  "${minutesString}:${secondsString}"
 }
