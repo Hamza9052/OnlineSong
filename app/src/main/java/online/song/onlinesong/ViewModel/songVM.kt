@@ -9,6 +9,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.LoginWithGoogle.SignInState
@@ -82,14 +84,7 @@ class songVM() : ViewModel() {
             SignInState()
         }
     }
-    private var _currentTime = MutableLiveData(0L) // Current position in milliseconds
-    val currentTime: LiveData<Long> get() = _currentTime
 
-    private var _duration = MutableLiveData(0L) // Duration in milliseconds
-    val duration: LiveData<Long> get() = _duration
-
-    private var _isPlaying = MutableLiveData(false) // Play/Pause state
-    val isPlaying: LiveData<Boolean> get() = _isPlaying
 
 
     private val _Categories = MutableLiveData<MutableList<String>>(mutableListOf())
@@ -404,39 +399,10 @@ class songVM() : ViewModel() {
 
     }
 
-    // Method to initialize ExoPlayer's data
-    suspend fun initializePlayer(exoPlayer: ExoPlayer) {
 
-        // Update duration when the media loads
-        _duration.value = exoPlayer.duration.coerceAtLeast(0L)
 
-        // Timer loop
-        while (true) {
-            if (_isPlaying.value == true) {
-                _currentTime.value = exoPlayer.currentPosition // Update current position
-            }
-            delay(1000L) // Update every second
-        }
 
-    }
 
-    // Method to toggle play/pause
-    fun togglePlayPause(exoPlayer: ExoPlayer) {
-        if (exoPlayer.isPlaying) {
-            exoPlayer.pause()
-            _isPlaying.value = false
-        } else {
-            exoPlayer.play()
-            _isPlaying.value = true
-        }
-    }
-
-    // Method to update ExoPlayer's position via slider
-    fun seekTo(position: Float, exoPlayer: ExoPlayer) {
-        val seekPosition = (position * _duration.value!!.toFloat()).toLong()
-        exoPlayer.seekTo(seekPosition)
-        _currentTime.value = seekPosition
-    }
 }
 
 

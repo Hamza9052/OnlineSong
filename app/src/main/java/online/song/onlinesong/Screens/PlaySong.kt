@@ -36,6 +36,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -61,6 +62,14 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.lifecycle.viewModelScope
+import androidx.media3.common.PlaybackException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import online.song.onlinesong.R
@@ -69,7 +78,7 @@ import online.song.onlinesong.ViewModel.songVM
 /**
  * @author Hamza Ouaissa
  */
-@SuppressLint("CoroutineCreationDuringComposition")
+@SuppressLint("CoroutineCreationDuringComposition", "RememberReturnType")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun playSong(
@@ -83,23 +92,24 @@ fun playSong(
     val n_s = songs.value[name]
     val n = songs.value[name]?.size
 
-    var exoPlayer = ExoPlayer.Builder(navController.context).build()
+    var exoPlayer = remember { ExoPlayer.Builder(navController.context).build() }
     val shuffleMode = remember { mutableStateOf(exoPlayer.shuffleModeEnabled) }
     val repeatMod = remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
-    val songList = remember { mutableListOf<MediaItem>() }
+    var songList = remember { mutableListOf<MediaItem>() }
+    val isPlaying =  remember { mutableStateOf(false) }
+    val isLoading =  remember { mutableStateOf(false) }
+
+
+    val PS = remember { mutableLongStateOf(0L) }
 
 
 
-
-    val currentPosition = remember { mutableStateOf(0L) }
-
-    var currentTime = viewModel.currentTime.observeAsState()
-    var duration = viewModel.duration.observeAsState()
-    var isPlaying = viewModel.isPlaying.observeAsState()
 
     var scope = rememberCoroutineScope()
     var totalTime = remember { mutableStateOf("00:00") }
-    val sliderValue = remember { mutableStateOf(0f) }
+    var currentTime= remember { mutableStateOf("00:00") }
+    val valueSlider = remember { mutableFloatStateOf(0f) }
+
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
             .data(viewModel.getImage(name,navController.context))
@@ -108,21 +118,12 @@ fun playSong(
             .placeholder(R.drawable.logo)
             .build()
     )
-    val totalDuration = remember { mutableStateOf(0L) }
-    var tim = remember{ mutableStateOf("00:00") }
+    val totalDuration = remember { mutableLongStateOf(0L) }
     var o = remember{ mutableIntStateOf(0) }
     for (l in 0 until n_s!!.size){
         if (n_s[l] == nameS){
             o.intValue = l
             break
-        }
-    }
-
-    LaunchedEffect(exoPlayer) {
-        while (exoPlayer.isPlaying) {
-            currentPosition.value = exoPlayer.currentPosition
-            sliderValue.value = currentPosition.value.toFloat() / totalDuration.value
-            delay(500L)
         }
     }
     if (n != null){
@@ -131,25 +132,24 @@ fun playSong(
             if (songList.contains(MediaItem.fromUri(elemnet)) == false){
                 songList.add(index,MediaItem.fromUri(elemnet))
             }
-
             Log.d("index", "playSong: ${n_s[index]}   ->${index}")
         }
     }
-
     LaunchedEffect(Unit) {
        viewModel.listSongs(cat,name)
    }
-    LaunchedEffect(exoPlayer) {
-        scope.launch{
-            viewModel.initializePlayer(exoPlayer)
+
+
+
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
         }
     }
 
 
-
-
-
-    Log.d("durection","${exoPlayer.currentPosition}")
+    Log.d("durection","${exoPlayer.bufferedPosition}")
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -220,7 +220,7 @@ fun playSong(
 
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                n_s[o.intValue],
+                n_s[o.intValue] ,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = colorResource(R.color.White),
@@ -231,15 +231,22 @@ fun playSong(
                 verticalAlignment = Alignment.CenterVertically,
 
             ){
+                LaunchedEffect(isPlaying.value) {
+                    while (true){
+                        if (isPlaying.value == true){
+                            valueSlider.floatValue = (exoPlayer.bufferedPosition / totalDuration.longValue).toFloat()
+                            delay(1000L)
+                        }
+                    }
+                }
 
-                duration.value?.let {
                     Slider(
-                        value =  if (it > 0) currentTime.value!!.toFloat() / duration.value!! else 0f,
+                        value = valueSlider.floatValue,
                         onValueChange = {
-                            viewModel.seekTo(it, exoPlayer)
+                            exoPlayer.seekTo(it.toLong())
+                            valueSlider.floatValue = it
                         },
-                        valueRange = 0f..1f,
-
+                        valueRange = 0f..(exoPlayer.currentPosition ?: 1L).toFloat(),
                         thumb = {
                             Box(
                                 modifier = Modifier
@@ -258,18 +265,17 @@ fun playSong(
                         modifier = Modifier
                             .weight(1f)
                     )
-                }
+
+
             }
 
             Row(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                scope.launch{
 
-                }
                 Text(
-                    text =time(currentTime.value),
+                    text = TotalTime(exoPlayer.bufferedPosition) ,
                     textAlign = TextAlign.Center,
                     color = colorResource(R.color.unfocus),
                     fontSize = 14.sp,
@@ -296,7 +302,8 @@ fun playSong(
                         if (playbackState == Player.STATE_READY) {
                             // Retrieve and format the total time
                             totalTime.value  = TotalTime(exoPlayer.duration)
-                            totalDuration.value = exoPlayer.duration
+                            totalDuration.longValue = exoPlayer.duration
+                            PS.longValue = exoPlayer.currentPosition
                             Log.d("TotalTime", totalTime.toString())
                         }
 
@@ -310,6 +317,9 @@ fun playSong(
                     }
 
                 })
+
+
+
                 Spacer(modifier = Modifier.weight(0.05f))
                 IconButton(onClick = {
                     exoPlayer.shuffleModeEnabled = !exoPlayer.shuffleModeEnabled
@@ -321,7 +331,7 @@ fun playSong(
                         contentDescription = "SkipPrevious",
                         tint =if (exoPlayer.shuffleModeEnabled == false)
                             colorResource(R.color.White)
-                        else colorResource(R.color.DeepPink)
+                        else colorResource(R.color.icon)
                         ,
                         modifier = Modifier.size(30.dp)
                     )
@@ -331,14 +341,12 @@ fun playSong(
 
 
                 IconButton(onClick = {
-
                     if (exoPlayer.currentMediaItemIndex == 0) {
                         o.intValue = songList.size - 1
                     } else {
                         exoPlayer.seekToPrevious()
-                        o.intValue =- 1
                     }
-                    Log.d("index", "playSong: ${o}   ->${exoPlayer.currentMediaItemIndex}")
+                    Log.d("index", "playSong: $o   ->${exoPlayer.currentMediaItemIndex}")
                 })
                 {
                     Icon(
@@ -353,7 +361,16 @@ fun playSong(
 
                 Button(
                     onClick = {
-                        viewModel.togglePlayPause(exoPlayer)
+
+                            if (exoPlayer.isPlaying) {
+                                exoPlayer.pause()
+                                isPlaying.value = false
+                            } else {
+                                exoPlayer.play()
+                                isPlaying.value = true
+                            }
+
+
                     },
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.icon)),
@@ -375,9 +392,8 @@ fun playSong(
                         o.intValue = 0
                     } else {
                         exoPlayer.seekToNext()
-                        o.value += 1
                     }
-                    Log.d("index", "playSong: ${o}   ->${exoPlayer.currentMediaItemIndex}")
+                    Log.d("index", "playSong: $o   ->${exoPlayer.currentMediaItemIndex}")
                 })
                 {
                     Icon(
@@ -404,7 +420,7 @@ fun playSong(
                         contentDescription = "Repeat Song",
                         tint = if (exoPlayer.repeatMode == Player.REPEAT_MODE_OFF)
                             colorResource(R.color.White)
-                        else colorResource(R.color.DeepPink)
+                        else colorResource(R.color.icon)
                         ,
                         modifier = Modifier.size(30.dp)
                     )
@@ -420,37 +436,11 @@ fun playSong(
 
 }
 
+@SuppressLint("DefaultLocale")
 fun TotalTime(lon: Long):String{
     val sec = lon/1000
     val min = sec / 60
     val seconds = sec % 60
-    val minutesString = if (min < 10) {
-        "0$min"
-    } else {
-        min.toString()
-    }
-    val secondsString = if (seconds < 10) {
-        "0$seconds"
-    } else {
-        seconds.toString()
-    }
-    return "$minutesString:$secondsString"
+    return String.format("%02d:%02d", min, seconds)
 }
 
- fun time(lon: Long?):String{
-    val sec = lon!!/1000
-    val minutes = (sec / 60) % 60
-    var seconds = sec % 60
-
-    val minutesString = if (minutes < 10) {
-        "0$minutes"
-    } else {
-        minutes.toString()
-    }
-    val secondsString = if (seconds < 10) {
-        "0$seconds"
-    } else {
-        seconds.toString()
-    }
-    return  "${minutesString}:${secondsString}"
-}
