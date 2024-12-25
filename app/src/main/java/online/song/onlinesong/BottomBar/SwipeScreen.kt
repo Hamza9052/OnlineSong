@@ -18,6 +18,7 @@ import online.song.onlinesong.Screens.Favorite
 import online.song.onlinesong.Screens.Home
 import online.song.onlinesong.Screens.Search
 import online.song.onlinesong.Screens.Screen.Search
+import online.song.onlinesong.Screens.testScreen
 import online.song.onlinesong.ViewModel.songVM
 import online.song.onlinesong.itemList.bottomIcons
 
@@ -44,7 +45,8 @@ fun SwipeScreen(
         userScrollEnabled = false
     ) {page ->
         when (page) {
-            0 -> Home(navController = navController,VM,state,onSignInClick,onSignOutClick,userdata)
+//            0 -> Home(navController = navController,VM,state,onSignInClick,onSignOutClick,userdata)
+            0 -> testScreen(VM,navController)
             1 -> Search(navController = navController,VM)
             2 -> Favorite(navController = navController)
         }
