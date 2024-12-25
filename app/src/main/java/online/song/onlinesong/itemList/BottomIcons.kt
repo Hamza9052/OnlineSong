@@ -13,8 +13,14 @@ val unselectedIcon: ImageVector,
 val hasNews: Boolean
 )
 val bottomIcons = listOf(
+//    BottomIcons(
+//        title ="home",
+//        Icons.Default.Home,
+//        Icons.Default.Home,
+//        false,
+//    ),
     BottomIcons(
-        title ="home",
+        title ="test",
         Icons.Default.Home,
         Icons.Default.Home,
         false,
