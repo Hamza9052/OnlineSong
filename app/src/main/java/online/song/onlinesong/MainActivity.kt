@@ -65,6 +65,7 @@ import online.song.onlinesong.Screens.Screen
 import online.song.onlinesong.Screens.Search
 import online.song.onlinesong.Screens.listOfSongs
 import online.song.onlinesong.Screens.playSong
+import online.song.onlinesong.Screens.testScreen
 import online.song.onlinesong.ViewModel.songVM
 import online.song.onlinesong.itemList.bottomIcons
 import online.song.onlinesong.ui.theme.OnlineSongTheme
@@ -128,9 +129,25 @@ class MainActivity : ComponentActivity() {
                     ) {
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.Home.route
+                            startDestination = Screen.Test.route
                         ) {
-
+                            composable(
+                                Screen.Test.route,
+                                exitTransition = {
+                                    slideOutHorizontally(
+                                        targetOffsetX = { -1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                                    )
+                                },
+                                popEnterTransition = {
+                                    slideInHorizontally(
+                                        initialOffsetX = { -1000 },
+                                        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                                    )
+                                }
+                            ){
+                                testScreen(VM,navController)
+                            }
                             composable(
                                 Screen.Home.route,
                                 exitTransition = {

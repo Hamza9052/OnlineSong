@@ -38,6 +38,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -68,12 +69,15 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Timeline
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
+import kotlin.concurrent.thread
 
 /**
  * @author Hamza Ouaissa
@@ -96,7 +100,7 @@ fun playSong(
     val shuffleMode = remember { mutableStateOf(exoPlayer.shuffleModeEnabled) }
     val repeatMod = remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
     var songList = remember { mutableListOf<MediaItem>() }
-    val isPlaying =  remember { mutableStateOf(false) }
+    var isPlaying =  remember { mutableStateOf(exoPlayer.isPlaying) }
     val isLoading =  remember { mutableStateOf(false) }
 
 
@@ -147,6 +151,20 @@ fun playSong(
             exoPlayer.release()
         }
     }
+
+      viewModel.viewModelScope.launch{
+          while (isPlaying.value) {
+              valueSlider.floatValue = PS.longValue.toFloat()
+              currentTime.value = TotalTime(PS.longValue)
+              delay(1000L) // Update every second
+              Log.e("exoplayer-Error1", "playSong:${valueSlider.floatValue}  ${currentTime.value}    ${PS.longValue} ", )
+          }
+          Log.e("exoplayer-Error1", "playSong: ${exoPlayer.isPlaying}")
+
+      }
+
+
+
 
 
     Log.d("durection","${exoPlayer.bufferedPosition}")
@@ -231,22 +249,16 @@ fun playSong(
                 verticalAlignment = Alignment.CenterVertically,
 
             ){
-                LaunchedEffect(isPlaying.value) {
-                    while (true){
-                        if (isPlaying.value == true){
-                            valueSlider.floatValue = (exoPlayer.bufferedPosition / totalDuration.longValue).toFloat()
-                            delay(1000L)
-                        }
-                    }
-                }
+
+
+
 
                     Slider(
                         value = valueSlider.floatValue,
                         onValueChange = {
                             exoPlayer.seekTo(it.toLong())
-                            valueSlider.floatValue = it
                         },
-                        valueRange = 0f..(exoPlayer.currentPosition ?: 1L).toFloat(),
+                        valueRange = 0f..(totalDuration.longValue ?: 1L).toFloat(),
                         thumb = {
                             Box(
                                 modifier = Modifier
@@ -260,7 +272,6 @@ fun playSong(
                             activeTrackColor = colorResource(R.color.icon),
                             inactiveTrackColor = Color.DarkGray,
                             thumbColor = Color.Transparent,
-                            disabledThumbColor = Color.Transparent
                         ),
                         modifier = Modifier
                             .weight(1f)
@@ -275,7 +286,7 @@ fun playSong(
             ) {
 
                 Text(
-                    text = TotalTime(exoPlayer.bufferedPosition) ,
+                    text = currentTime.value ,
                     textAlign = TextAlign.Center,
                     color = colorResource(R.color.unfocus),
                     fontSize = 14.sp,
@@ -299,12 +310,22 @@ fun playSong(
                 exoPlayer.prepare()
                 exoPlayer.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
-                        if (playbackState == Player.STATE_READY) {
-                            // Retrieve and format the total time
-                            totalTime.value  = TotalTime(exoPlayer.duration)
-                            totalDuration.longValue = exoPlayer.duration
-                            PS.longValue = exoPlayer.currentPosition
-                            Log.d("TotalTime", totalTime.toString())
+                        when (playbackState) {
+                            Player.STATE_READY -> {
+                                totalTime.value = TotalTime(exoPlayer.duration)
+                                totalDuration.longValue = exoPlayer.duration
+                                PS.longValue = exoPlayer.currentPosition
+                                isPlaying.value = exoPlayer.isPlaying
+                            }
+
+                            Player.STATE_ENDED -> {
+                                // Handle end of playback, if needed
+                                isPlaying.value = false
+                            }
+
+                            else -> {
+                                isPlaying.value = false
+                            }
                         }
 
                     }
@@ -315,6 +336,7 @@ fun playSong(
                     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                         shuffleMode.value = shuffleModeEnabled
                     }
+
 
                 })
 
@@ -362,13 +384,13 @@ fun playSong(
                 Button(
                     onClick = {
 
-                            if (exoPlayer.isPlaying) {
-                                exoPlayer.pause()
-                                isPlaying.value = false
-                            } else {
-                                exoPlayer.play()
-                                isPlaying.value = true
-                            }
+                        if (isPlaying.value) {
+                            exoPlayer.pause() // Pause playback
+                        } else {
+                            exoPlayer.play() // Resume or start playback
+                        }
+                        // Update the state to reflect the current playback state
+                        isPlaying.value = exoPlayer.isPlaying
 
 
                     },
