@@ -129,25 +129,25 @@ class MainActivity : ComponentActivity() {
                     ) {
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.Test.route
+                            startDestination = Screen.Home.route
                         ) {
-                            composable(
-                                Screen.Test.route,
-                                exitTransition = {
-                                    slideOutHorizontally(
-                                        targetOffsetX = { -1000 },
-                                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                                    )
-                                },
-                                popEnterTransition = {
-                                    slideInHorizontally(
-                                        initialOffsetX = { -1000 },
-                                        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
-                                    )
-                                }
-                            ){
-                                testScreen(VM,navController)
-                            }
+//                            composable(
+//                                Screen.Test.route,
+//                                exitTransition = {
+//                                    slideOutHorizontally(
+//                                        targetOffsetX = { -1000 },
+//                                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+//                                    )
+//                                },
+//                                popEnterTransition = {
+//                                    slideInHorizontally(
+//                                        initialOffsetX = { -1000 },
+//                                        animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+//                                    )
+//                                }
+//                            ){
+//                                testScreen(VM,navController)
+//                            }
                             composable(
                                 Screen.Home.route,
                                 exitTransition = {

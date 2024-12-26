@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.DisposableEffectScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.livedata.observeAsState
@@ -145,17 +146,63 @@ fun playSong(
 
 
 
+DisposableEffect(Unit) {
+    onDispose {
+        exoPlayer.release()
+    }
+}
+    LaunchedEffect (exoPlayer,o,songList) {
+        exoPlayer.setMediaItem(songList[o.intValue])
+        exoPlayer.prepare()
+        exoPlayer.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                when (playbackState) {
+                    Player.STATE_READY -> {
+                        totalTime.value = TotalTime(exoPlayer.duration)
+                        totalDuration.longValue = exoPlayer.duration
+                        PS.longValue = exoPlayer.currentPosition
+                        isPlaying.value = exoPlayer.isPlaying
+                    }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayer.release()
-        }
+                    Player.STATE_ENDED -> {
+                        // Handle end of playback, if needed
+                        isPlaying.value = false
+                    }
+                    Player.COMMAND_SEEK_TO_NEXT -> {
+                        o.intValue += 1
+                        exoPlayer.seekToNext()
+                    }
+                    Player.COMMAND_SEEK_TO_PREVIOUS -> {
+                        o.intValue -= 1
+                        exoPlayer.seekToPrevious()
+                    }
+
+
+                    Player.STATE_ENDED -> {
+                        exoPlayer.seekToNext()
+                    }
+
+
+                }
+
+            }
+
+            override fun onRepeatModeChanged(repeatMode: Int) {
+                repeatMod.intValue = repeatMode
+            }
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                shuffleMode.value = shuffleModeEnabled
+            }
+
+
+        })
+
     }
 
       viewModel.viewModelScope.launch{
           while (isPlaying.value) {
-              valueSlider.floatValue = PS.longValue.toFloat()
-              currentTime.value = TotalTime(PS.longValue)
+              valueSlider.floatValue = exoPlayer.currentPosition.toFloat()
+              currentTime.value = TotalTime(exoPlayer.currentPosition)
               delay(1000L) // Update every second
               Log.e("exoplayer-Error1", "playSong:${valueSlider.floatValue}  ${currentTime.value}    ${PS.longValue} ", )
           }
@@ -306,39 +353,7 @@ fun playSong(
                 horizontalArrangement = Arrangement.SpaceAround
             ){
 
-                exoPlayer.setMediaItem(songList[o.intValue])
-                exoPlayer.prepare()
-                exoPlayer.addListener(object : Player.Listener {
-                    override fun onPlaybackStateChanged(playbackState: Int) {
-                        when (playbackState) {
-                            Player.STATE_READY -> {
-                                totalTime.value = TotalTime(exoPlayer.duration)
-                                totalDuration.longValue = exoPlayer.duration
-                                PS.longValue = exoPlayer.currentPosition
-                                isPlaying.value = exoPlayer.isPlaying
-                            }
 
-                            Player.STATE_ENDED -> {
-                                // Handle end of playback, if needed
-                                isPlaying.value = false
-                            }
-
-                            else -> {
-                                isPlaying.value = false
-                            }
-                        }
-
-                    }
-
-                    override fun onRepeatModeChanged(repeatMode: Int) {
-                        repeatMod.intValue = repeatMode
-                    }
-                    override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-                        shuffleMode.value = shuffleModeEnabled
-                    }
-
-
-                })
 
 
 
@@ -364,11 +379,14 @@ fun playSong(
 
                 IconButton(onClick = {
                     if (exoPlayer.currentMediaItemIndex == 0) {
+                        exoPlayer.seekTo(0)
                         o.intValue = songList.size - 1
                     } else {
-                        exoPlayer.seekToPrevious()
+                        exoPlayer.seekTo(0)
+                        o.intValue -= 1
+                        exoPlayer.seekToNext()
                     }
-                    Log.d("index", "playSong: $o   ->${exoPlayer.currentMediaItemIndex}")
+                    Log.d("index", "playSong: $o   ->${exoPlayer.seekToNext()}")
                 })
                 {
                     Icon(
@@ -413,9 +431,11 @@ fun playSong(
                         exoPlayer.seekTo(0)
                         o.intValue = 0
                     } else {
-                        exoPlayer.seekToNext()
+                        exoPlayer.seekTo(0)
+                        o.intValue += 1
+                        exoPlayer.seekToPrevious()
                     }
-                    Log.d("index", "playSong: $o   ->${exoPlayer.currentMediaItemIndex}")
+                    Log.d("index", "playSong: $o   ->${exoPlayer.seekToPrevious()}")
                 })
                 {
                     Icon(
@@ -457,6 +477,9 @@ fun playSong(
     }
 
 }
+
+
+
 
 @SuppressLint("DefaultLocale")
 fun TotalTime(lon: Long):String{
