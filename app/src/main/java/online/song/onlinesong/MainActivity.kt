@@ -1,6 +1,7 @@
 package online.song.onlinesong
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -117,7 +118,15 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold (
                     bottomBar = {
+                        val currentBackStackEntry by navController.currentBackStackEntryAsState()
+                        val currentRoute = currentBackStackEntry?.destination?.route ?: ""
+                        if (currentRoute.startsWith("ScreenPlay")) {
+                            Log.e("Screen", "I'm on the correct screen")
+                        } else {
+                            Log.e("Screen", "I'm on a different screen")
                             bottomBar(navController = navController, pagerState = pageState)
+                        }
+
                     }
                 ) {paddingValues ->
                     Column(
@@ -259,7 +268,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 exitTransition = {
                                     slideOutVertically(
-                                        targetOffsetY = { it },
+                                        targetOffsetY = { 2 },
                                         animationSpec = spring(
                                             dampingRatio = Spring.DampingRatioLowBouncy,
                                             stiffness = Spring.StiffnessLow

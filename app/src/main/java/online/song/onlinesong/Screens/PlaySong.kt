@@ -152,7 +152,8 @@ DisposableEffect(Unit) {
     }
 }
     LaunchedEffect (exoPlayer,o,songList) {
-        exoPlayer.setMediaItem(songList[o.intValue])
+        exoPlayer.setMediaItems(songList)
+        exoPlayer.seekToDefaultPosition(o.intValue)
         exoPlayer.prepare()
         exoPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -196,6 +197,9 @@ DisposableEffect(Unit) {
 
 
         })
+        songList.forEach {name ->
+            Log.d("List inside of LaunchEffect", "playSong:$name ${o.intValue}")
+        }
 
     }
 
