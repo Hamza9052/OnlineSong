@@ -4,32 +4,30 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import com.cloudinary.Cloudinary
-import com.cloudinary.android.MediaManager
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.delay
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.LoginWithGoogle.SignInState
 import online.song.onlinesong.LoginWithGoogle.SignResult
+import online.song.onlinesong.LoginWithGoogle.UserData
 import kotlin.collections.contains
-import kotlin.text.toLong
 import kotlin.toString
 
 class songVM() : ViewModel() {
@@ -38,7 +36,6 @@ class songVM() : ViewModel() {
     private val _state = MutableStateFlow(SignInState())
     val state = _state.asStateFlow()
 
-
     fun Action(event: SongEvent, context: Context) {
         when (event) {
             is SongEvent.Play -> play(event.list, context)
@@ -46,8 +43,12 @@ class songVM() : ViewModel() {
             is SongEvent.Stop -> stop(event.list, context)
             is SongEvent.Next -> next(event.list, context)
             is SongEvent.Prev -> prev(event.list, context)
+            is SongEvent.Favorit -> favorit(event.name,event.result,event.singer,event.cat,context)
+            is SongEvent.checkFavoriteSong  -> checkForFavorite(event.result)
         }
     }
+
+
 
 
     private fun play(list: List<String>, context: Context) {
@@ -399,6 +400,117 @@ class songVM() : ViewModel() {
 
     }
 
+
+
+    private val _isAdd = MutableLiveData<Boolean>()
+    val isAdd: LiveData<Boolean> get() = _isAdd
+    private fun favorit(
+        nameSong: String,
+        result: UserData,
+        nameSinger:String,
+        cat:String,
+        context: Context,
+        ) {
+        val info = mapOf(
+            "F_song" to nameSong,
+            "Singer" to nameSinger,
+            "Cat" to cat
+        )
+        if (result.userId != null ){
+            Firebase.firestore.collection("FavoriteSongs")
+                .document(result.userId.toString())
+                .set(info)
+                .addOnSuccessListener{
+                    _isAdd.value = true
+                    Log.d("Add favorit songs", "favorit: it's add ${result.userId} ${_isAdd.value}", )
+                }
+                .addOnFailureListener{
+                    _isAdd.value = false
+                    Log.e("Add favorit songs", "favorit: it's not add ", )
+                }
+
+
+        }else{
+            when(_state.asStateFlow().value.isSignInSuccessful){
+                true -> {
+                    Firebase.firestore.collection("FavoriteSongs")
+                        .document(result.userId.toString())
+                        .update("F_song",FieldValue.delete())
+                        .addOnSuccessListener{
+                            _isAdd.value = false
+                            Log.d("Add favorit songs", "favorit: it's delete ", )
+                        }
+                        .addOnFailureListener{
+                            _isAdd.value = true
+                            Log.e("Add favorit songs", "favorit: it's not delete ", )
+                        }
+
+                }
+                false ->{
+                Toast.makeText(context,"Please SignIn", Toast.LENGTH_LONG).show()
+                    Log.d("Add favorit songs", "favorit: Please SignIn ", )
+                }
+            }
+
+        }
+
+
+    }
+
+     fun check(
+        nameSong: String,
+        result: UserData,
+    ){
+
+         Log.e("Add favorit songs", "check: ${result.userId}",)
+        Firebase.firestore.collection("FavoriteSongs")
+            .document(result.userId.toString())
+            .get()
+            .addOnSuccessListener{resul->
+
+
+                        _isAdd.value = resul.get("F_song").toString() == nameSong
+
+                    Log.e("Add favorit songs", "check: ${result.userId} ${resul.get("F_song")}",)
+                }
+
+
+            }
+
+
+    private val _listOfFavorite = MutableLiveData<MutableMap<String, String>>(mutableMapOf())
+
+
+    val listOfFavorite: LiveData<Map<String,String>> get() = _listOfFavorite.map { it.toMap() }
+    private val _isFavoriteLoading = MutableLiveData<Boolean>()
+    val isFavoriteLoading: LiveData<Boolean> get() = _isFavoriteLoading
+    private fun checkForFavorite(data: UserData) {
+        if (data.userId != null){
+            _isFavoriteLoading.value = true
+            Firebase.firestore.collection("FavoriteSongs")
+                .get()
+                .addOnSuccessListener{docs->
+                    if (docs != null){
+                        var list = _listOfFavorite.value ?: mutableMapOf<String,String>()
+                        for (doc in docs){
+                            val singer = doc.get("Singer").toString()
+                            val songName =doc.get("F_song").toString()
+                            if (doc.toString() == data.userId.toString()){
+                                if (listOfFavorite.value?.get(singer)?.contains(songName) != true ) {
+                                    list[doc.get("Singer").toString()] = doc.get("F_song").toString()
+
+                                }
+                            }
+                        }
+                        _listOfFavorite.value = list
+                        _isFavoriteLoading.value = false
+                    }
+                }
+                .addOnFailureListener{
+                    _isFavoriteLoading.value = false
+                }
+        }
+    }
 
 
 
