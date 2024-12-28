@@ -209,7 +209,10 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             ){
-                                Favorite(navController)
+                                Favorite(
+                                    navController,
+                                    googleAuthUiClient.getSignedInUser()
+                                )
                             }
                             composable(
                                 "list/{singerName}/{cat}",
