@@ -6,7 +6,7 @@ data class SignResult(
 )
 
 data class UserData(
-    val userId: String,
+    val userId: String?,
     val userName: String?,
     val ProfilePicUri: String?
 )
