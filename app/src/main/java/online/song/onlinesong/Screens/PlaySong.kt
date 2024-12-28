@@ -37,9 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.DisposableEffectScope
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,21 +62,15 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Timeline
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import online.song.onlinesong.Events.SongEvent
+import online.song.onlinesong.LoginWithGoogle.UserData
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
-import kotlin.concurrent.thread
 
 /**
  * @author Hamza Ouaissa
@@ -89,9 +81,10 @@ import kotlin.concurrent.thread
 fun playSong(
     viewModel: songVM,
     navController: NavController,
-    name:String,
-    nameS:String,
-    cat:String
+    name: String,
+    nameS: String,
+    cat: String,
+    userData: UserData?
 ){
     val songs = viewModel.ListSongs.observeAsState(emptyMap<String, List<String>>())
     val n_s = songs.value[name]
@@ -102,7 +95,7 @@ fun playSong(
     val repeatMod = remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
     var songList = remember { mutableListOf<MediaItem>() }
     var isPlaying =  remember { mutableStateOf(exoPlayer.isPlaying) }
-    val isLoading =  remember { mutableStateOf(false) }
+    var isAdd = viewModel.isAdd.observeAsState(Boolean)
 
 
     val PS = remember { mutableLongStateOf(0L) }
@@ -110,8 +103,9 @@ fun playSong(
 
 
 
-    var scope = rememberCoroutineScope()
+
     var totalTime = remember { mutableStateOf("00:00") }
+    var nam = remember { mutableStateOf("Loading...") }
     var currentTime= remember { mutableStateOf("00:00") }
     val valueSlider = remember { mutableFloatStateOf(0f) }
 
@@ -131,19 +125,22 @@ fun playSong(
             break
         }
     }
-    if (n != null){
-        for (index in 0 until songs.value[name]!!.size){
-            val elemnet = viewModel.getSongs(n_s[index],navController.context)
-            if (songList.contains(MediaItem.fromUri(elemnet)) == false){
-                songList.add(index,MediaItem.fromUri(elemnet))
+    LaunchedEffect(Unit) {
+        if (n != null){
+            for (index in 0 until songs.value[name]!!.size){
+                val elemnet = viewModel.getSongs(n_s[index],navController.context)
+                if (songList.contains(MediaItem.fromUri(elemnet)) == false){
+                    songList.add(index,MediaItem.fromUri(elemnet))
+                }
             }
-            Log.d("index", "playSong: ${n_s[index]}   ->${index}")
         }
     }
+
     LaunchedEffect(Unit) {
        viewModel.listSongs(cat,name)
-   }
 
+
+   }
 
 
 DisposableEffect(Unit) {
@@ -151,7 +148,7 @@ DisposableEffect(Unit) {
         exoPlayer.release()
     }
 }
-    LaunchedEffect (exoPlayer,o,songList) {
+    LaunchedEffect (exoPlayer,o.intValue,songList,userData) {
         exoPlayer.setMediaItems(songList)
         exoPlayer.seekToDefaultPosition(o.intValue)
         exoPlayer.prepare()
@@ -163,25 +160,19 @@ DisposableEffect(Unit) {
                         totalDuration.longValue = exoPlayer.duration
                         PS.longValue = exoPlayer.currentPosition
                         isPlaying.value = exoPlayer.isPlaying
+                        nam.value = n_s[exoPlayer.currentMediaItemIndex].toString()
+                        if (userData != null){
+                            viewModel.check(n_s[exoPlayer.currentMediaItemIndex],userData)
+                        }
                     }
 
                     Player.STATE_ENDED -> {
                         // Handle end of playback, if needed
                         isPlaying.value = false
-                    }
-                    Player.COMMAND_SEEK_TO_NEXT -> {
-                        o.intValue += 1
                         exoPlayer.seekToNext()
-                    }
-                    Player.COMMAND_SEEK_TO_PREVIOUS -> {
-                        o.intValue -= 1
-                        exoPlayer.seekToPrevious()
                     }
 
 
-                    Player.STATE_ENDED -> {
-                        exoPlayer.seekToNext()
-                    }
 
 
                 }
@@ -251,11 +242,13 @@ DisposableEffect(Unit) {
                 },
                 actions = {
 
-                    IconButton(onClick = {  }) {
+                    IconButton(onClick = {
+                        viewModel.Action(SongEvent.Favorit(n_s[o.intValue],userData!!),navController.context)
+                    }) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
                             contentDescription = "Localized description",
-                            tint = colorResource(R.color.unfocus),
+                            tint = colorResource(if (isAdd.value != true) R.color.unfocus else R.color.icon)   ,
                             modifier = Modifier.size(30.dp)
                         )
                     }
@@ -288,8 +281,9 @@ DisposableEffect(Unit) {
             )
 
             Spacer(modifier = Modifier.weight(1f))
+
             Text(
-                n_s[o.intValue] ,
+                nam.value,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = colorResource(R.color.White),
@@ -382,15 +376,12 @@ DisposableEffect(Unit) {
 
 
                 IconButton(onClick = {
-                    if (exoPlayer.currentMediaItemIndex == 0) {
-                        exoPlayer.seekTo(0)
-                        o.intValue = songList.size - 1
+                    if (exoPlayer.currentMediaItemIndex > 0) {
+                        exoPlayer.seekToPrevious()
                     } else {
-                        exoPlayer.seekTo(0)
-                        o.intValue -= 1
-                        exoPlayer.seekToNext()
+                        exoPlayer.seekTo(exoPlayer.mediaItemCount - 1, 0) // Loop to the last item
                     }
-                    Log.d("index", "playSong: $o   ->${exoPlayer.seekToNext()}")
+
                 })
                 {
                     Icon(
@@ -410,6 +401,9 @@ DisposableEffect(Unit) {
                             exoPlayer.pause() // Pause playback
                         } else {
                             exoPlayer.play() // Resume or start playback
+                            songList.forEach{name->
+                                Log.d("ExoPlayer", "List song: ${name}")
+                            }
                         }
                         // Update the state to reflect the current playback state
                         isPlaying.value = exoPlayer.isPlaying
@@ -431,15 +425,13 @@ DisposableEffect(Unit) {
                 Spacer(modifier = Modifier.weight(0.1f))
 
                 IconButton(onClick = {
-                    if (exoPlayer.currentMediaItemIndex == exoPlayer.mediaItemCount - 1) {
-                        exoPlayer.seekTo(0)
-                        o.intValue = 0
+
+                    if (exoPlayer.currentMediaItemIndex < exoPlayer.mediaItemCount - 1) {
+                        exoPlayer.seekToNext()
                     } else {
-                        exoPlayer.seekTo(0)
-                        o.intValue += 1
-                        exoPlayer.seekToPrevious()
+                        exoPlayer.seekTo(0, 0) // Loop to the first item
                     }
-                    Log.d("index", "playSong: $o   ->${exoPlayer.seekToPrevious()}")
+
                 })
                 {
                     Icon(
