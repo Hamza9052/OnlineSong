@@ -37,6 +37,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.launch
 import online.song.onlinesong.BottomBar.bottomBar
 import online.song.onlinesong.LoginWithGoogle.GoogleAuthUiClient
@@ -49,6 +51,7 @@ import online.song.onlinesong.Screens.playSong
 import online.song.onlinesong.ViewModel.songVM
 import online.song.onlinesong.itemList.bottomIcons
 import online.song.onlinesong.ui.theme.OnlineSongTheme
+import java.lang.reflect.Type
 
 class MainActivity : ComponentActivity() {
    private val VM by viewModels<songVM>()
@@ -239,7 +242,7 @@ class MainActivity : ComponentActivity() {
 
                             }
                             composable(
-                                "ScreenPlay/{name}/{singerName}/{cat}",
+                                "ScreenPlay/{name}/{singerName}/{list}",
                                 enterTransition = {
                                     slideInVertically(
                                         initialOffsetY = { it },
@@ -261,13 +264,14 @@ class MainActivity : ComponentActivity() {
                             ){backStackEntry->
                                 val singerName =backStackEntry.arguments?.getString("singerName")?:"Loading..."
                                 val name =backStackEntry.arguments?.getString("name")?:"Loading..."
-                                val cat =backStackEntry.arguments?.getString("cat")?:"Loading..."
+                                val serializedList = backStackEntry.arguments?.getString("list")?:"Loading..."
+                                val list:List<String> = Gson().fromJson(serializedList,object : TypeToken<List<String>>() {}.type)
                                 playSong(
                                     VM,
                                     navController,
                                     singerName,
                                     name,
-                                    cat,
+                                    list,
                                      googleAuthUiClient.getSignedInUser()
                                 )
 
