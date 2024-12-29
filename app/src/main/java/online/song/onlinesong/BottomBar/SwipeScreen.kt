@@ -48,7 +48,7 @@ fun SwipeScreen(
             0 -> Home(navController = navController,VM,state,onSignInClick,onSignOutClick,userdata)
 //            0 -> testScreen(VM,navController)
             1 -> Search(navController = navController,VM)
-            2 -> Favorite(navController = navController)
+            2 -> Favorite( navController,userdata,VM)
         }
 
     }
