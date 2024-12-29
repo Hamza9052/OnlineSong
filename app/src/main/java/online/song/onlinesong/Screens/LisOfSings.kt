@@ -1,8 +1,6 @@
 package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
-import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,7 +23,6 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -43,23 +40,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
-import okhttp3.internal.wait
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 
@@ -209,7 +202,7 @@ fun listOfSongs(
                                     var time = if (index < totalTime.value.size && totalTime.value[name] != null) totalTime.value[name] else "00:00"
 
                                     ItemSong(image,name,onClick,navController,names,
-                                        time.toString(),cat
+                                        time.toString(),songs.value[names]
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                 }
@@ -254,14 +247,15 @@ fun ItemSong(
     name: String,
     onClick: () -> Unit,
     navController: NavController,
-    nameSinger:String,
+    nameSinger: String,
     time: String,
-    cat: String
+    list: List<String>?
 ){
+    val jsonList = Gson().toJson(list)
     Box(
         modifier = Modifier
             .clickable(onClick = {
-                navController.navigate("ScreenPlay/$name/$nameSinger/$cat")
+                navController.navigate("ScreenPlay/$name/$nameSinger/$jsonList")
                 onClick()
             })
             .background(color = colorResource(R.color.background))
