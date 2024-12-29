@@ -83,72 +83,66 @@ fun playSong(
     navController: NavController,
     name: String,
     nameS: String,
-    cat: String,
-    userData: UserData?
-){
+    cat: List<String>,
+    userData: UserData?,
+) {
     val songs = viewModel.ListSongs.observeAsState(emptyMap<String, List<String>>())
-    val n_s = songs.value[name]
-    val n = songs.value[name]?.size
+
 
     var exoPlayer = remember { ExoPlayer.Builder(navController.context).build() }
     val shuffleMode = remember { mutableStateOf(exoPlayer.shuffleModeEnabled) }
     val repeatMod = remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
     var songList = remember { mutableListOf<MediaItem>() }
-    var isPlaying =  remember { mutableStateOf(exoPlayer.isPlaying) }
+    var isPlaying = remember { mutableStateOf(exoPlayer.isPlaying) }
     var isAdd = viewModel.isAdd.observeAsState(Boolean)
 
 
     val PS = remember { mutableLongStateOf(0L) }
 
 
-
-
-
     var totalTime = remember { mutableStateOf("00:00") }
     var nam = remember { mutableStateOf("Loading...") }
-    var currentTime= remember { mutableStateOf("00:00") }
+    var currentTime = remember { mutableStateOf("00:00") }
     val valueSlider = remember { mutableFloatStateOf(0f) }
 
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
-            .data(viewModel.getImage(name,navController.context))
+            .data(viewModel.getImage(name, navController.context))
             .crossfade(true)
             .error(R.drawable.error)
             .placeholder(R.drawable.logo)
             .build()
     )
     val totalDuration = remember { mutableLongStateOf(0L) }
-    var o = remember{ mutableIntStateOf(0) }
-    for (l in 0 until n_s!!.size){
-        if (n_s[l] == nameS){
+    var o = remember { mutableIntStateOf(0) }
+    for (l in 0 until cat.size) {
+        if (cat[l] == nameS) {
             o.intValue = l
             break
         }
     }
-    LaunchedEffect(Unit) {
-        if (n != null){
-            for (index in 0 until songs.value[name]!!.size){
-                val elemnet = viewModel.getSongs(n_s[index],navController.context)
-                if (songList.contains(MediaItem.fromUri(elemnet)) == false){
-                    songList.add(index,MediaItem.fromUri(elemnet))
+    cat.forEachIndexed {index,name->
+        Log.e("list songs", "playSong: $name  $index")
+    }
+
+
+
+            for (index in 0 until cat.size) {
+                val elemnet = viewModel.getSongs(cat[index], navController.context)
+                if (songList.contains(MediaItem.fromUri(elemnet)) == false) {
+                    songList.add(index, MediaItem.fromUri(elemnet))
                 }
             }
+
+
+
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
         }
     }
-
-    LaunchedEffect(Unit) {
-       viewModel.listSongs(cat,name)
-
-
-   }
-
-
-DisposableEffect(Unit) {
-    onDispose {
-        exoPlayer.release()
-    }
-}
-    LaunchedEffect (exoPlayer,o.intValue,songList,userData) {
+    LaunchedEffect(exoPlayer, o.intValue, songList, userData) {
         exoPlayer.setMediaItems(songList)
         exoPlayer.seekToDefaultPosition(o.intValue)
         exoPlayer.prepare()
@@ -160,9 +154,9 @@ DisposableEffect(Unit) {
                         totalDuration.longValue = exoPlayer.duration
                         PS.longValue = exoPlayer.currentPosition
                         isPlaying.value = exoPlayer.isPlaying
-                        nam.value = n_s[exoPlayer.currentMediaItemIndex].toString()
-                        if (userData != null){
-                            viewModel.check(n_s[exoPlayer.currentMediaItemIndex],userData)
+                        nam.value = cat[exoPlayer.currentMediaItemIndex].toString()
+                        if (userData != null) {
+                            viewModel.check(cat[exoPlayer.currentMediaItemIndex], userData)
                         }
                     }
 
@@ -173,8 +167,6 @@ DisposableEffect(Unit) {
                     }
 
 
-
-
                 }
 
             }
@@ -182,34 +174,34 @@ DisposableEffect(Unit) {
             override fun onRepeatModeChanged(repeatMode: Int) {
                 repeatMod.intValue = repeatMode
             }
+
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                 shuffleMode.value = shuffleModeEnabled
             }
 
 
         })
-        songList.forEach {name ->
-            Log.d("List inside of LaunchEffect", "playSong:$name ${o.intValue}")
+    }
+
+    viewModel.viewModelScope.launch {
+        while (isPlaying.value) {
+            valueSlider.floatValue = exoPlayer.currentPosition.toFloat()
+            currentTime.value = TotalTime(exoPlayer.currentPosition)
+            delay(1000L) // Update every second
+            Log.e(
+                "exoplayer-Error1",
+                "playSong:${valueSlider.floatValue}  ${currentTime.value}    ${PS.longValue} ",
+            )
         }
+        Log.e("exoplayer-Error1", "playSong: ${exoPlayer.isPlaying}")
 
     }
 
-      viewModel.viewModelScope.launch{
-          while (isPlaying.value) {
-              valueSlider.floatValue = exoPlayer.currentPosition.toFloat()
-              currentTime.value = TotalTime(exoPlayer.currentPosition)
-              delay(1000L) // Update every second
-              Log.e("exoplayer-Error1", "playSong:${valueSlider.floatValue}  ${currentTime.value}    ${PS.longValue} ", )
-          }
-          Log.e("exoplayer-Error1", "playSong: ${exoPlayer.isPlaying}")
-
-      }
 
 
 
 
-
-    Log.d("durection","${exoPlayer.bufferedPosition}")
+    Log.d("durection", "${exoPlayer.bufferedPosition}")
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -229,7 +221,7 @@ DisposableEffect(Unit) {
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navController.navigate("list/$name/$cat")
+                        navController.popBackStack()
                         o.intValue = 0
                     }) {
                         Icon(
@@ -243,17 +235,18 @@ DisposableEffect(Unit) {
                 actions = {
 
                     IconButton(onClick = {
-                        viewModel.Action(SongEvent.Favorit(
-                            n_s[o.intValue]
-                            ,userData!!,
-                            name,
-                            cat
-                        ),navController.context)
+                        viewModel.Action(
+                            SongEvent.Favorit(
+                                cat[o.intValue],
+                                userData!!,
+                                name
+                            ), navController.context
+                        )
                     }) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
                             contentDescription = "Localized description",
-                            tint = colorResource(if (isAdd.value != true) R.color.unfocus else R.color.icon)   ,
+                            tint = colorResource(if (isAdd.value != true) R.color.unfocus else R.color.icon),
                             modifier = Modifier.size(30.dp)
                         )
                     }
@@ -262,7 +255,7 @@ DisposableEffect(Unit) {
 
             )
         }
-    ) {padding ->
+    ) { padding ->
         padding.calculateTopPadding()
         Column(
             verticalArrangement = Arrangement.Center,
@@ -283,7 +276,7 @@ DisposableEffect(Unit) {
                 contentScale = ContentScale.Crop,
                 alignment = Alignment.Center,
 
-            )
+                )
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -298,34 +291,32 @@ DisposableEffect(Unit) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
 
-            ){
+                ) {
 
 
+                Slider(
+                    value = valueSlider.floatValue,
+                    onValueChange = {
+                        exoPlayer.seekTo(it.toLong())
+                    },
+                    valueRange = 0f..(totalDuration.longValue ?: 1L).toFloat(),
+                    thumb = {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                // Thumb size
+                                .background(Color.White, CircleShape),
+                        )
 
-
-                    Slider(
-                        value = valueSlider.floatValue,
-                        onValueChange = {
-                            exoPlayer.seekTo(it.toLong())
-                        },
-                        valueRange = 0f..(totalDuration.longValue ?: 1L).toFloat(),
-                        thumb = {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    // Thumb size
-                                    .background(Color.White, CircleShape),
-                            )
-
-                        },
-                        colors = SliderDefaults.colors(
-                            activeTrackColor = colorResource(R.color.icon),
-                            inactiveTrackColor = Color.DarkGray,
-                            thumbColor = Color.Transparent,
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                    )
+                    },
+                    colors = SliderDefaults.colors(
+                        activeTrackColor = colorResource(R.color.icon),
+                        inactiveTrackColor = Color.DarkGray,
+                        thumbColor = Color.Transparent,
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                )
 
 
             }
@@ -336,7 +327,7 @@ DisposableEffect(Unit) {
             ) {
 
                 Text(
-                    text = currentTime.value ,
+                    text = currentTime.value,
                     textAlign = TextAlign.Center,
                     color = colorResource(R.color.unfocus),
                     fontSize = 14.sp,
@@ -354,10 +345,7 @@ DisposableEffect(Unit) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceAround
-            ){
-
-
-
+            ) {
 
 
                 Spacer(modifier = Modifier.weight(0.05f))
@@ -369,10 +357,9 @@ DisposableEffect(Unit) {
                             Icons.Default.Shuffle
                         else Icons.Default.ShuffleOn,
                         contentDescription = "SkipPrevious",
-                        tint =if (exoPlayer.shuffleModeEnabled == false)
+                        tint = if (exoPlayer.shuffleModeEnabled == false)
                             colorResource(R.color.White)
-                        else colorResource(R.color.icon)
-                        ,
+                        else colorResource(R.color.icon),
                         modifier = Modifier.size(30.dp)
                     )
                 }
@@ -386,7 +373,6 @@ DisposableEffect(Unit) {
                     } else {
                         exoPlayer.seekTo(exoPlayer.mediaItemCount - 1, 0) // Loop to the last item
                     }
-
                 })
                 {
                     Icon(
@@ -406,7 +392,7 @@ DisposableEffect(Unit) {
                             exoPlayer.pause() // Pause playback
                         } else {
                             exoPlayer.play() // Resume or start playback
-                            songList.forEach{name->
+                            songList.forEach { name ->
                                 Log.d("ExoPlayer", "List song: ${name}")
                             }
                         }
@@ -420,7 +406,7 @@ DisposableEffect(Unit) {
                     modifier = Modifier.size(60.dp)
                 ) {
                     Icon(
-                        imageVector =if(isPlaying.value == true) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        imageVector = if (isPlaying.value == true) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = "Play/Pause",
                         tint = colorResource(R.color.White),
                         modifier = Modifier.size(40.dp)
@@ -455,7 +441,7 @@ DisposableEffect(Unit) {
                         exoPlayer.repeatMode = repeatMod.intValue
                     } else {
                         repeatMod.intValue = Player.REPEAT_MODE_OFF
-                        exoPlayer.repeatMode =  repeatMod.intValue
+                        exoPlayer.repeatMode = repeatMod.intValue
                     }
                 }) {
                     Icon(
@@ -463,8 +449,7 @@ DisposableEffect(Unit) {
                         contentDescription = "Repeat Song",
                         tint = if (exoPlayer.repeatMode == Player.REPEAT_MODE_OFF)
                             colorResource(R.color.White)
-                        else colorResource(R.color.icon)
-                        ,
+                        else colorResource(R.color.icon),
                         modifier = Modifier.size(30.dp)
                     )
                 }
@@ -480,11 +465,9 @@ DisposableEffect(Unit) {
 }
 
 
-
-
 @SuppressLint("DefaultLocale")
-fun TotalTime(lon: Long):String{
-    val sec = lon/1000
+fun TotalTime(lon: Long): String {
+    val sec = lon / 1000
     val min = sec / 60
     val seconds = sec % 60
     return String.format("%02d:%02d", min, seconds)
