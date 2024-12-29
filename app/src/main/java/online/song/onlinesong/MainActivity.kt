@@ -211,7 +211,8 @@ class MainActivity : ComponentActivity() {
                             ){
                                 Favorite(
                                     navController,
-                                    googleAuthUiClient.getSignedInUser()
+                                    googleAuthUiClient.getSignedInUser(),
+                                     VM
                                 )
                             }
                             composable(

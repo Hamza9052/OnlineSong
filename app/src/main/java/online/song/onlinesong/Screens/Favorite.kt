@@ -46,7 +46,7 @@ import online.song.onlinesong.ViewModel.songVM
 @Composable
 fun Favorite(
     navController: NavController,
-    userData: UserData,
+    userData: UserData?,
     viewModel: songVM
 ){
     val songs = viewModel.listOfFavorite.observeAsState(emptyMap<String,String>())
@@ -64,7 +64,7 @@ fun Favorite(
             onRefresh = {
                 isRefreshing.value == true
                 scope.launch{
-                    viewModel.Action(SongEvent.checkFavoriteSong(userData),navController.context)
+                    viewModel.Action(SongEvent.checkFavoriteSong(userData!!),navController.context)
                 }
             },
 
@@ -95,7 +95,7 @@ fun Favorite(
                                 .placeholder(R.drawable.logo)
                                 .build()
                         )
-                        Item(image,nameSong,{},navController,name)
+                        Item(image, nameSong.toString(),navController,name,"")
                     }
                 }
             }
@@ -109,7 +109,7 @@ fun Favorite(
 fun Item(
     image: AsyncImagePainter,
     name: String,
-    onClick: () -> Unit,
+//    onClick: () -> Unit,
     navController: NavController,
     nameSinger:String,
     cat: String
@@ -118,7 +118,7 @@ fun Item(
         modifier = Modifier
             .clickable(onClick = {
                 navController.navigate("ScreenPlay/$name/$nameSinger/$cat")
-                onClick()
+//                onClick()
             })
             .background(color = colorResource(R.color.background))
             .fillMaxWidth()
