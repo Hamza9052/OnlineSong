@@ -99,5 +99,7 @@ dependencies {
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.28.0")
     //Preview
     implementation ("androidx.compose.ui:ui-tooling-preview:1.7.6")
+    //GSON
+    implementation ("com.google.code.gson:gson:2.10.1")
 }
 
