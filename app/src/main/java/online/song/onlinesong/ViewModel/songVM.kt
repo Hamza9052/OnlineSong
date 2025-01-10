@@ -33,6 +33,7 @@ import online.song.onlinesong.LoginWithGoogle.SignInState
 import online.song.onlinesong.LoginWithGoogle.SignResult
 import online.song.onlinesong.LoginWithGoogle.UserData
 import online.song.onlinesong.Screens.TotalTime
+import online.song.onlinesong.Service.Service
 import kotlin.collections.MutableList
 import kotlin.collections.contains
 import kotlin.toString
@@ -79,7 +80,6 @@ class songVM() : ViewModel() {
 
 
     private fun play(exoPlayer: ExoPlayer) {
-
             exoPlayer.play()
         // Update the state to reflect the current playback state
         _isPlaying.value = exoPlayer.isPlaying
