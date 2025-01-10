@@ -10,6 +10,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -19,16 +20,21 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import online.song.onlinesong.Events.PlayerAction
+import online.song.onlinesong.Events.PlayerState
 import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.LoginWithGoogle.SignInState
 import online.song.onlinesong.LoginWithGoogle.SignResult
 import online.song.onlinesong.LoginWithGoogle.UserData
+import online.song.onlinesong.Screens.TotalTime
+import kotlin.collections.MutableList
 import kotlin.collections.contains
-import kotlin.math.log
 import kotlin.toString
 
 class songVM() : ViewModel() {
@@ -37,39 +43,68 @@ class songVM() : ViewModel() {
     private val _state = MutableStateFlow(SignInState())
     val state = _state.asStateFlow()
 
+    private var _isPlaying =  MutableLiveData<Boolean>()
+    val isPlaying: LiveData<Boolean> get() = _isPlaying
+    private val _items = MutableLiveData<MutableList<MediaItem>>(mutableListOf<MediaItem>())
+
+    // Expose the LiveData as a read-only List<String> to the observers.
+    val items: LiveData<List<MediaItem>> get() = _items.map { it.toList() }
+
     fun Action(event: SongEvent, context: Context) {
         when (event) {
-            is SongEvent.Play -> play(event.list, context)
-            is SongEvent.Pause -> pause(event.list, context)
-            is SongEvent.Stop -> stop(event.list, context)
-            is SongEvent.Next -> next(event.list, context)
-            is SongEvent.Prev -> prev(event.list, context)
+            is SongEvent.PLAY -> play(event.exoPlayer)
+            is SongEvent.PAUSE -> pause(event.exoPlayer)
+            is SongEvent.NEXT -> next(event.exoPlayer)
+            is SongEvent.PREV ->  prev(event.exoPlayer)
             is SongEvent.Favorit -> favorit(event.name,event.result,event.singer,context)
             is SongEvent.checkFavoriteSong  -> checkForFavorite(event.result)
+            is SongEvent.ListSong -> listS(event.list,context)
+
         }
     }
 
 
 
-
-    private fun play(list: List<String>, context: Context) {
-
-    }
-
-    private fun pause(list: List<String>, context: Context) {
-
-    }
-
-    private fun stop(list: List<String>, context: Context) {
-
-    }
-
-    private fun next(list: List<String>, context: Context) {
+    private fun listS(list: List<String>,context: Context) {
+        val currentList = _items.value ?: mutableListOf<MediaItem>()
+        for (index in 0 until list.size) {
+            val item = getSongs(list[index], context)
+            if (items.value?.contains(MediaItem.fromUri(item))  == false) {
+                currentList.add(index, MediaItem.fromUri(item))
+            }
+        }
+        _items.value = currentList
 
     }
 
-    private fun prev(list: List<String>, context: Context) {
 
+    private fun play(exoPlayer: ExoPlayer) {
+
+            exoPlayer.play()
+        // Update the state to reflect the current playback state
+        _isPlaying.value = exoPlayer.isPlaying
+    }
+
+    private fun pause(exoPlayer: ExoPlayer) {
+            exoPlayer.pause()
+        // Update the state to reflect the current playback state
+        _isPlaying.value = exoPlayer.isPlaying
+    }
+
+    private fun next(exoPlayer: ExoPlayer) {
+        if (exoPlayer.currentMediaItemIndex < exoPlayer.mediaItemCount - 1) {
+            exoPlayer.seekToNext()
+        } else {
+            exoPlayer.seekTo(0, 0) // Loop to the first item
+        }
+    }
+
+    private fun prev(exoPlayer: ExoPlayer) {
+        if (exoPlayer.currentMediaItemIndex > 0) {
+            exoPlayer.seekToPrevious()
+        } else {
+            exoPlayer.seekTo(exoPlayer.mediaItemCount - 1, 0) // Loop to the last item
+        }
     }
 
     fun onSignInResult(result: SignResult) {
@@ -89,10 +124,10 @@ class songVM() : ViewModel() {
 
 
 
-    private val _Categories = MutableLiveData<MutableList<String>>(mutableListOf())
+    private val _categories = MutableLiveData<MutableList<String>>(mutableListOf())
 
     // Expose the LiveData as a read-only List<String> to the observers.
-    val Categories: LiveData<List<String>> get() = _Categories.map { it.toList() }
+    val Categories: LiveData<List<String>> get() = _categories.map { it.toList() }
 
     private val _ListSongs = MutableLiveData<MutableMap<String, List<String>>>(mutableMapOf())
 
@@ -164,11 +199,11 @@ class songVM() : ViewModel() {
                         var doc = d.reference.collection("Categories")
                         doc.get()
                             .addOnSuccessListener { rsult ->
-                                val currentList = _Categories.value ?: mutableListOf()
+                                val currentList = _categories.value ?: mutableListOf()
                                 for (doc in rsult) {
                                     var name_type = doc.get("name_type")
                                     if (name_type != null && name_type != 0) {
-                                        Log.d("name_type", "getname: ${_Categories.value}")
+                                        Log.d("name_type", "getname: ${_categories.value}")
 
                                         for (i in 0 until Categories.value!!.size) {
                                             if (Categories.value?.get(i) == name_type) {
@@ -183,7 +218,7 @@ class songVM() : ViewModel() {
                                     }
                                 }
 
-                                _Categories.value = currentList
+                                _categories.value = currentList
                                 _isLoading.value = false
                             }
                             .addOnFailureListener {
@@ -192,7 +227,7 @@ class songVM() : ViewModel() {
                     }
                 }
 
-                Log.d("name_type", "getname: ${_Categories.value?.size}")
+                Log.d("name_type", "getname: ${_categories.value?.size}")
 
             }
             .addOnFailureListener {
@@ -532,6 +567,24 @@ class songVM() : ViewModel() {
                 }
         }
     }
+
+        private var _valueSlider = MutableLiveData<Float>()
+        val valueSlider: LiveData<Float> get() = _valueSlider
+        private var _currentTime = MutableLiveData<String>()
+        val currentTime: LiveData<String> get() = _currentTime
+
+        fun slider(isPlaying: Boolean,exoPlayer: ExoPlayer,){
+            viewModelScope.launch {
+                while (isPlaying) {
+                    _valueSlider.value = exoPlayer.currentPosition.toFloat()
+                    _currentTime.value = TotalTime(exoPlayer.currentPosition)
+                    delay(1000L) // Update every second
+
+                }
+
+            }
+
+        }
 
 
 
