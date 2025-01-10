@@ -1,6 +1,8 @@
 package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -71,8 +73,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.LoginWithGoogle.UserData
-
 import online.song.onlinesong.R
+import online.song.onlinesong.Service.Service
+import online.song.onlinesong.Service.Util
 import online.song.onlinesong.ViewModel.songVM
 
 /**
@@ -117,7 +120,23 @@ fun playSong(
 
 
 
+    fun sendBroadcastAction(context: Context, action: String) {
+        val intent = Intent(action)
+        context.sendBroadcast(intent)
+    }
+    LaunchedEffect(Unit) {
+        // Example: Sending a play broadcast when the composable starts
+        sendBroadcastAction(navController.context, Util.ACTION_PLAY)
 
+
+    }
+
+    // Example: Slider value change broadcast
+    LaunchedEffect(valueSlider.value) {
+        navController.context.sendBroadcast(Intent(Util.SLIDER_STATE_CHANNEL).apply {
+            putExtra(Util.SLIDER_CHANGE_VALUE, valueSlider.value)
+        })
+    }
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
             .data(viewModel.getImage(name, navController.context))
@@ -381,6 +400,7 @@ fun playSong(
                             viewModel.Action(SongEvent.PAUSE(exoPlayer),navController.context)
                         }else{
                             viewModel.Action(SongEvent.PLAY(exoPlayer),navController.context)
+                            Service().showNotification(nam.value,name,navController.context,exoPlayer)
                         }
                     },
                     shape = CircleShape,
