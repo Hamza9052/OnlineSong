@@ -1,5 +1,7 @@
 package online.song.onlinesong
 
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -48,6 +50,7 @@ import online.song.onlinesong.Screens.Screen
 import online.song.onlinesong.Screens.Search
 import online.song.onlinesong.Screens.listOfSongs
 import online.song.onlinesong.Screens.playSong
+import online.song.onlinesong.Service.MusicService
 import online.song.onlinesong.ViewModel.songVM
 import online.song.onlinesong.itemList.bottomIcons
 import online.song.onlinesong.ui.theme.OnlineSongTheme
@@ -63,6 +66,12 @@ class MainActivity : ComponentActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            startForegroundService(Intent(this, MusicService::class.java))
+        }else{
+            startService(Intent(this, MusicService::class.java))
+        }
+
         enableEdgeToEdge()
         setContent {
             OnlineSongTheme {
@@ -283,6 +292,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+    }
+
+    override fun onStart() {
+        super.onStart()
+    }
+
+    override fun onStop() {
+        super.onStop()
     }
 }
 
