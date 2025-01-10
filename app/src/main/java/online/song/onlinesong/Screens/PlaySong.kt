@@ -1,6 +1,7 @@
 package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
+import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -64,11 +65,13 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.LoginWithGoogle.UserData
+
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 
@@ -83,27 +86,37 @@ fun playSong(
     navController: NavController,
     name: String,
     nameS: String,
-    cat: List<String>,
+    list: List<String>,
     userData: UserData?,
 ) {
-    val songs = viewModel.ListSongs.observeAsState(emptyMap<String, List<String>>())
 
 
     var exoPlayer = remember { ExoPlayer.Builder(navController.context).build() }
     val shuffleMode = remember { mutableStateOf(exoPlayer.shuffleModeEnabled) }
     val repeatMod = remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
-    var songList = remember { mutableListOf<MediaItem>() }
-    var isPlaying = remember { mutableStateOf(exoPlayer.isPlaying) }
+    var songList = viewModel.items.observeAsState(emptyList())
+    var isPlaying = viewModel.isPlaying.observeAsState(false)
     var isAdd = viewModel.isAdd.observeAsState(Boolean)
-
 
     val PS = remember { mutableLongStateOf(0L) }
 
 
     var totalTime = remember { mutableStateOf("00:00") }
     var nam = remember { mutableStateOf("Loading...") }
-    var currentTime = remember { mutableStateOf("00:00") }
-    val valueSlider = remember { mutableFloatStateOf(0f) }
+    var currentTime = viewModel.currentTime.observeAsState(initial = "")
+    val valueSlider = viewModel.valueSlider.observeAsState(initial = 0f)
+
+
+
+    LaunchedEffect(list) {
+        viewModel.Action(SongEvent.ListSong(list),navController.context)
+    }
+    LaunchedEffect(exoPlayer,isPlaying.value) {
+        viewModel.slider(isPlaying.value,exoPlayer)
+    }
+
+
+
 
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
@@ -115,24 +128,15 @@ fun playSong(
     )
     val totalDuration = remember { mutableLongStateOf(0L) }
     var o = remember { mutableIntStateOf(0) }
-    for (l in 0 until cat.size) {
-        if (cat[l] == nameS) {
+    for (l in 0 until list.size) {
+        if (list[l] == nameS) {
             o.intValue = l
             break
         }
     }
-    cat.forEachIndexed {index,name->
-        Log.e("list songs", "playSong: $name  $index")
-    }
 
 
 
-            for (index in 0 until cat.size) {
-                val elemnet = viewModel.getSongs(cat[index], navController.context)
-                if (songList.contains(MediaItem.fromUri(elemnet)) == false) {
-                    songList.add(index, MediaItem.fromUri(elemnet))
-                }
-            }
 
 
 
@@ -143,7 +147,7 @@ fun playSong(
         }
     }
     LaunchedEffect(exoPlayer, o.intValue, songList, userData) {
-        exoPlayer.setMediaItems(songList)
+        exoPlayer.setMediaItems(songList.value)
         exoPlayer.seekToDefaultPosition(o.intValue)
         exoPlayer.prepare()
         exoPlayer.addListener(object : Player.Listener {
@@ -153,18 +157,19 @@ fun playSong(
                         totalTime.value = TotalTime(exoPlayer.duration)
                         totalDuration.longValue = exoPlayer.duration
                         PS.longValue = exoPlayer.currentPosition
-                        isPlaying.value = exoPlayer.isPlaying
-                        nam.value = cat[exoPlayer.currentMediaItemIndex].toString()
+
+                        nam.value = list[exoPlayer.currentMediaItemIndex].toString()
                         if (userData != null) {
-                            viewModel.check(cat[exoPlayer.currentMediaItemIndex], userData)
+                            viewModel.check(list[exoPlayer.currentMediaItemIndex], userData)
                         }
+
                     }
 
                     Player.STATE_ENDED -> {
                         // Handle end of playback, if needed
-                        isPlaying.value = false
                         exoPlayer.seekToNext()
                     }
+
 
 
                 }
@@ -183,19 +188,6 @@ fun playSong(
         })
     }
 
-    viewModel.viewModelScope.launch {
-        while (isPlaying.value) {
-            valueSlider.floatValue = exoPlayer.currentPosition.toFloat()
-            currentTime.value = TotalTime(exoPlayer.currentPosition)
-            delay(1000L) // Update every second
-            Log.e(
-                "exoplayer-Error1",
-                "playSong:${valueSlider.floatValue}  ${currentTime.value}    ${PS.longValue} ",
-            )
-        }
-        Log.e("exoplayer-Error1", "playSong: ${exoPlayer.isPlaying}")
-
-    }
 
 
 
@@ -237,7 +229,7 @@ fun playSong(
                     IconButton(onClick = {
                         viewModel.Action(
                             SongEvent.Favorit(
-                                cat[o.intValue],
+                                list[o.intValue],
                                 userData!!,
                                 name
                             ), navController.context
@@ -295,7 +287,7 @@ fun playSong(
 
 
                 Slider(
-                    value = valueSlider.floatValue,
+                    value = valueSlider.value,
                     onValueChange = {
                         exoPlayer.seekTo(it.toLong())
                     },
@@ -349,7 +341,8 @@ fun playSong(
 
 
                 Spacer(modifier = Modifier.weight(0.05f))
-                IconButton(onClick = {
+                IconButton(
+                    onClick = {
                     exoPlayer.shuffleModeEnabled = !exoPlayer.shuffleModeEnabled
                 }) {
                     Icon(
@@ -367,12 +360,9 @@ fun playSong(
                 Spacer(modifier = Modifier.weight(0.3f))
 
 
-                IconButton(onClick = {
-                    if (exoPlayer.currentMediaItemIndex > 0) {
-                        exoPlayer.seekToPrevious()
-                    } else {
-                        exoPlayer.seekTo(exoPlayer.mediaItemCount - 1, 0) // Loop to the last item
-                    }
+                IconButton(
+                    onClick = {
+                    viewModel.Action(SongEvent.PREV(exoPlayer),navController.context)
                 })
                 {
                     Icon(
@@ -387,19 +377,11 @@ fun playSong(
 
                 Button(
                     onClick = {
-
-                        if (isPlaying.value) {
-                            exoPlayer.pause() // Pause playback
-                        } else {
-                            exoPlayer.play() // Resume or start playback
-                            songList.forEach { name ->
-                                Log.d("ExoPlayer", "List song: ${name}")
-                            }
+                        if (isPlaying.value == true){
+                            viewModel.Action(SongEvent.PAUSE(exoPlayer),navController.context)
+                        }else{
+                            viewModel.Action(SongEvent.PLAY(exoPlayer),navController.context)
                         }
-                        // Update the state to reflect the current playback state
-                        isPlaying.value = exoPlayer.isPlaying
-
-
                     },
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.icon)),
@@ -417,11 +399,7 @@ fun playSong(
 
                 IconButton(onClick = {
 
-                    if (exoPlayer.currentMediaItemIndex < exoPlayer.mediaItemCount - 1) {
-                        exoPlayer.seekToNext()
-                    } else {
-                        exoPlayer.seekTo(0, 0) // Loop to the first item
-                    }
+                    viewModel.Action(SongEvent.NEXT(exoPlayer),navController.context)
 
                 })
                 {
