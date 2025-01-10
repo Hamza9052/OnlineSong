@@ -1,5 +1,7 @@
 package online.song.onlinesong
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -96,6 +98,7 @@ class MainActivity : ComponentActivity() {
 
                     }
                )
+
 
                 LaunchedEffect(key1 = state.isSignInSuccessful) {
                     if (state.isSignInSuccessful){
