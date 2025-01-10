@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    id ("kotlin-parcelize")
 //    id("com.google.devtools.ksp") // Use KSP instead of kapt
 }
 
@@ -101,5 +102,9 @@ dependencies {
     implementation ("androidx.compose.ui:ui-tooling-preview:1.7.6")
     //GSON
     implementation ("com.google.code.gson:gson:2.10.1")
+    //MediaSession
+    implementation ("androidx.media:media:1.7.0")
+    implementation ("androidx.media2:media2-session:1.3.0")
+
 }
 

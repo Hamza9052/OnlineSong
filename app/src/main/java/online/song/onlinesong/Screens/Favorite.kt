@@ -1,5 +1,6 @@
 package online.song.onlinesong.Screens
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -62,6 +63,7 @@ import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 
 
+@SuppressLint("SuspiciousIndentation")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Favorite(
