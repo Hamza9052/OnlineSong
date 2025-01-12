@@ -13,43 +13,48 @@ import android.os.IBinder
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.ViewModelProvider
 
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.offline.DownloadService
 import online.song.onlinesong.CHANNEL_ID
 import online.song.onlinesong.CHANNEL_NAME
+import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.MainActivity
 import online.song.onlinesong.R
+import online.song.onlinesong.ViewModel.songVM
 
 
 const val CHANNEL_ID = "channel_id"
 const val CHANNEL_NAME = "channel_name"
 class Service:Service() {
 
-    lateinit var exoPlayer: ExoPlayer
+
+    private lateinit var viewModel: songVM
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = showNotification("Song Name", "Artist Name", this, exoPlayer)
 
-        // Start the service in the foreground with the notification
 
-            startForeground(1, notification)  // Start the service as a foreground service with the notification
 
+        when (intent?.action) {
+            Util.ACTION_PLAY -> viewModel.Action(SongEvent.PLAY,this)
+            Util.ACTION_PAUSE -> viewModel.Action(SongEvent.PAUSE,this)
+            Util.ACTION_NEXT -> viewModel.Action(SongEvent.NEXT,this)
+            Util.ACTION_PREV -> viewModel.Action(SongEvent.PREV,this)
+        }
 
         return START_STICKY // Ensures the service keeps running if killed by the system
     }
-
+    fun getViewModel(): songVM {
+        return viewModel
+    }
     override fun onCreate() {
         super.onCreate()
+        viewModel = ViewModelProvider.AndroidViewModelFactory.getInstance(application).create(songVM::class.java)
         val context: Context = applicationContext
         createNotificationChannel(context)
-        val notification = showNotification("Song Name", "Artist Name", this, exoPlayer)
-
-        // Start the service in the foreground
-
-            startForeground(1, notification)  // Start the service as a foreground service with the notification
 
 
-        exoPlayer = ExoPlayer.Builder(this).build()
+
         val filter = IntentFilter().apply {
             addAction(Util.ACTION_PLAY)
             addAction(Util.ACTION_PAUSE)
@@ -59,17 +64,22 @@ class Service:Service() {
             addAction(Util.PLAYER_STATE_CHANNEL)
         }
 
-        registerReceiver(MusicService() ,filter!!)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(MusicService(), filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(MusicService(), filter!!)
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(MusicService())
-        exoPlayer.release()
-        if (exoPlayer.isPlaying){
-            exoPlayer.stop()
-        }
+
+        stopSelf()
+
     }
+
+
 
 
 
@@ -78,23 +88,17 @@ class Service:Service() {
     }
 
 
-    fun showNotification(Song: String, Artist: String, context: Context, exoPlayer: ExoPlayer):Notification {
+    fun showNotification(Song: String, Artist: String, context: Context, exoPlayer: ExoPlayer,isPlaying: Boolean):Notification {
 
         // Build the notification
-        val playIntent = Intent(context, MusicService::class.java).apply {
-            action = Util.ACTION_PLAY
+        val playPauseIntent = Intent(context, MusicService::class.java).apply {
+            action = if (isPlaying) Util.ACTION_PAUSE else Util.ACTION_PLAY
         }
-        val playPendingIntent: PendingIntent = PendingIntent.getBroadcast(
-            context, 0, playIntent, PendingIntent.FLAG_IMMUTABLE
+        val playPausePendingIntent: PendingIntent = PendingIntent.getBroadcast(
+            context, 0, playPauseIntent, PendingIntent.FLAG_IMMUTABLE
         )
 
-        val pauseIntent = Intent(context, MusicService::class.java).apply {
-            action = Util.ACTION_PAUSE
-        }
-        val pausePendingIntent: PendingIntent = PendingIntent.getBroadcast(
-            context, 0, pauseIntent, PendingIntent.FLAG_IMMUTABLE
-        )
-
+        // Next Action
         val nextIntent = Intent(context, MusicService::class.java).apply {
             action = Util.ACTION_NEXT
         }
@@ -102,24 +106,26 @@ class Service:Service() {
             context, 0, nextIntent, PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Previous Action
         val prevIntent = Intent(context, MusicService::class.java).apply {
             action = Util.ACTION_PREV
         }
         val prevPendingIntent: PendingIntent = PendingIntent.getBroadcast(
             context, 0, prevIntent, PendingIntent.FLAG_IMMUTABLE
         )
+
         createNotificationChannel(context)
 
 
-        val notification = NotificationCompat.Builder(context, "your_channel_id")
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(Song)
             .setContentText(Artist)
             .setSmallIcon(R.drawable.logo)
             .addAction(
-                if (exoPlayer.isPlaying) R.drawable.baseline_play_arrow_24 else R.drawable.baseline_play_arrow_24,
-                if (exoPlayer.isPlaying) "Pause" else "Play",
-                if (exoPlayer.isPlaying)pausePendingIntent else playPendingIntent
-            ) // Add pause action
+                if (isPlaying) R.drawable.baseline_pause_24 else R.drawable.baseline_play_arrow_24,
+                if (isPlaying) "Pause" else "Play",
+                playPausePendingIntent
+            )
             .addAction(R.drawable.baseline_skip_next_24, "Next", nextPendingIntent) // Add next action
             .addAction(R.drawable.baseline_skip_previous_24, "Previous", prevPendingIntent) // Add previous action
             .setOngoing(exoPlayer.isPlaying) // Set the ongoing flag based on player state

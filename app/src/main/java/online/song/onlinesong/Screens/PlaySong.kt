@@ -94,7 +94,7 @@ fun playSong(
 ) {
 
 
-    var exoPlayer = remember { ExoPlayer.Builder(navController.context).build() }
+    var exoPlayer = viewModel.exoPlayer
     val shuffleMode = remember { mutableStateOf(exoPlayer.shuffleModeEnabled) }
     val repeatMod = remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
     var songList = viewModel.items.observeAsState(emptyList())
@@ -368,7 +368,7 @@ fun playSong(
                         imageVector = if (shuffleMode.value == false)
                             Icons.Default.Shuffle
                         else Icons.Default.ShuffleOn,
-                        contentDescription = "SkipPrevious",
+                        contentDescription = "shuffleMode",
                         tint = if (exoPlayer.shuffleModeEnabled == false)
                             colorResource(R.color.White)
                         else colorResource(R.color.icon),
@@ -381,7 +381,8 @@ fun playSong(
 
                 IconButton(
                     onClick = {
-                    viewModel.Action(SongEvent.PREV(exoPlayer),navController.context)
+                        viewModel.Action(SongEvent.PREV,navController.context)
+                        Service().showNotification(nam.value,name, navController.context, exoPlayer, isPlaying = true)  // Update with the current song info
                 })
                 {
                     Icon(
@@ -397,11 +398,14 @@ fun playSong(
                 Button(
                     onClick = {
                         if (isPlaying.value == true){
-                            viewModel.Action(SongEvent.PAUSE(exoPlayer),navController.context)
+                            viewModel.Action(SongEvent.PAUSE,navController.context)
+                            Service().showNotification(nam.value,name, navController.context, exoPlayer, isPlaying = false)
                         }else{
-                            viewModel.Action(SongEvent.PLAY(exoPlayer),navController.context)
-                            Service().showNotification(nam.value,name,navController.context,exoPlayer)
+                            viewModel.Action(SongEvent.PLAY,navController.context)
+                            Service().showNotification(nam.value,name,navController.context,exoPlayer, isPlaying = true)
                         }
+
+
                     },
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(colorResource(R.color.icon)),
@@ -419,7 +423,8 @@ fun playSong(
 
                 IconButton(onClick = {
 
-                    viewModel.Action(SongEvent.NEXT(exoPlayer),navController.context)
+                    viewModel.Action(SongEvent.NEXT,navController.context)
+                    Service().showNotification(nam.value,name, navController.context, exoPlayer, isPlaying = true)  // Update with the current song info
 
                 })
                 {
