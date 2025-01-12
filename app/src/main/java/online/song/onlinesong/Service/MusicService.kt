@@ -1,4 +1,5 @@
 package online.song.onlinesong.Service
+import android.app.Application
 import android.app.PendingIntent
 
 import android.content.BroadcastReceiver
@@ -17,37 +18,37 @@ import kotlin.math.roundToLong
 
 class MusicService : BroadcastReceiver() {
 
-    private lateinit var exoPlayer: ExoPlayer
-    private lateinit var viewModel: songVM
-    private fun updateDuration(value: Float) {
-        if (value != 0f){
-            exoPlayer.seekTo(value.roundToLong())
-        }
-    }
+
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        if (!::exoPlayer.isInitialized) {
-            exoPlayer = ExoPlayer.Builder(context!!).build()
+        context?.let {nonNullContext->
+            val serviceIntent = Intent(nonNullContext, Service::class.java).apply {
+                action = intent?.action
+            }
+            nonNullContext.startService(serviceIntent)
+            val applicationContext = nonNullContext.applicationContext as Application
+            when (intent?.action) {
+                Util.ACTION_PLAY -> {
+
+                    val service = nonNullContext.applicationContext as Service
+                    service.getViewModel().Action(SongEvent.PLAY, nonNullContext)
+                }
+                Util.ACTION_PAUSE -> {
+                    val service = nonNullContext.applicationContext as Service
+                    service.getViewModel().Action(SongEvent.PAUSE, nonNullContext)
+                }
+                Util.ACTION_NEXT -> {
+                    val service = nonNullContext.applicationContext as Service
+                    service.getViewModel().Action(SongEvent.NEXT, nonNullContext)
+                }
+                Util.ACTION_PREV -> {
+                    val service = nonNullContext.applicationContext as Service
+                    service.getViewModel().Action(SongEvent.PREV, nonNullContext)
+                }
+            }
         }
-        viewModel = ViewModelProvider(context as AppCompatActivity).get(songVM::class.java)
-        when (intent?.action) {
-            Util.ACTION_PLAY -> {
-                // Trigger the play action in the ViewModel
-                viewModel.Action(SongEvent.PLAY(exoPlayer),context)
-            }
-            Util.ACTION_PAUSE -> {
-                // Trigger the pause action in the ViewModel
-                viewModel.Action(SongEvent.PAUSE(exoPlayer),context)
-            }
-            Util.ACTION_NEXT -> {
-                // Trigger the next action in the ViewModel
-                viewModel.Action(SongEvent.NEXT(exoPlayer),context)
-            }
-            Util.ACTION_PREV -> {
-                // Trigger the previous action in the ViewModel
-                viewModel.Action(SongEvent.PREV(exoPlayer),context)
-            }
-        }
+
+
     }
 
 
