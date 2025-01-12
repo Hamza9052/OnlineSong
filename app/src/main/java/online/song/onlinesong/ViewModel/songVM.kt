@@ -1,11 +1,13 @@
 package online.song.onlinesong.ViewModel
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.core.net.toUri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -38,7 +40,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.contains
 import kotlin.toString
 
-class songVM() : ViewModel() {
+class songVM(application: Application) : AndroidViewModel(application) {
 
 
     private val _state = MutableStateFlow(SignInState())
@@ -47,16 +49,16 @@ class songVM() : ViewModel() {
     private var _isPlaying =  MutableLiveData<Boolean>()
     val isPlaying: LiveData<Boolean> get() = _isPlaying
     private val _items = MutableLiveData<MutableList<MediaItem>>(mutableListOf<MediaItem>())
-
+    val exoPlayer = ExoPlayer.Builder(application).build()
     // Expose the LiveData as a read-only List<String> to the observers.
     val items: LiveData<List<MediaItem>> get() = _items.map { it.toList() }
 
     fun Action(event: SongEvent, context: Context) {
         when (event) {
-            is SongEvent.PLAY -> play(event.exoPlayer)
-            is SongEvent.PAUSE -> pause(event.exoPlayer)
-            is SongEvent.NEXT -> next(event.exoPlayer)
-            is SongEvent.PREV ->  prev(event.exoPlayer)
+            is SongEvent.PLAY -> play()
+            is SongEvent.PAUSE -> pause()
+            is SongEvent.NEXT -> next()
+            is SongEvent.PREV ->  prev()
             is SongEvent.Favorit -> favorit(event.name,event.result,event.singer,context)
             is SongEvent.checkFavoriteSong  -> checkForFavorite(event.result)
             is SongEvent.ListSong -> listS(event.list,context)
@@ -79,19 +81,19 @@ class songVM() : ViewModel() {
     }
 
 
-    private fun play(exoPlayer: ExoPlayer) {
+    private fun play() {
             exoPlayer.play()
         // Update the state to reflect the current playback state
         _isPlaying.value = exoPlayer.isPlaying
     }
 
-    private fun pause(exoPlayer: ExoPlayer) {
+    private fun pause() {
             exoPlayer.pause()
         // Update the state to reflect the current playback state
         _isPlaying.value = exoPlayer.isPlaying
     }
 
-    private fun next(exoPlayer: ExoPlayer) {
+    private fun next() {
         if (exoPlayer.currentMediaItemIndex < exoPlayer.mediaItemCount - 1) {
             exoPlayer.seekToNext()
         } else {
@@ -99,7 +101,7 @@ class songVM() : ViewModel() {
         }
     }
 
-    private fun prev(exoPlayer: ExoPlayer) {
+    private fun prev() {
         if (exoPlayer.currentMediaItemIndex > 0) {
             exoPlayer.seekToPrevious()
         } else {
