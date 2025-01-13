@@ -1,4 +1,5 @@
 package online.song.onlinesong.Service
+import android.R.attr.action
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,8 +13,10 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.LaunchedEffect
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.media3.common.MediaItem
 
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.offline.DownloadService
@@ -23,6 +26,7 @@ import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.MainActivity
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
+import java.util.Collections.list
 
 
 const val CHANNEL_ID = "channel_id"
@@ -30,30 +34,16 @@ const val CHANNEL_NAME = "channel_name"
 class Service:Service() {
 
 
-    private lateinit var viewModel: songVM
+    lateinit var exoPlayer: ExoPlayer
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-
-
-
-        when (intent?.action) {
-            Util.ACTION_PLAY -> viewModel.Action(SongEvent.PLAY,this)
-            Util.ACTION_PAUSE -> viewModel.Action(SongEvent.PAUSE,this)
-            Util.ACTION_NEXT -> viewModel.Action(SongEvent.NEXT,this)
-            Util.ACTION_PREV -> viewModel.Action(SongEvent.PREV,this)
-        }
 
         return START_STICKY // Ensures the service keeps running if killed by the system
     }
-    fun getViewModel(): songVM {
-        return viewModel
-    }
     override fun onCreate() {
         super.onCreate()
-        viewModel = ViewModelProvider.AndroidViewModelFactory.getInstance(application).create(songVM::class.java)
+        exoPlayer = ExoPlayer.Builder(application).build()
         val context: Context = applicationContext
         createNotificationChannel(context)
-
-
 
         val filter = IntentFilter().apply {
             addAction(Util.ACTION_PLAY)
@@ -147,7 +137,7 @@ class Service:Service() {
             val notificationManager = context.getSystemService(NotificationManager::class.java)
             if (notificationManager != null) {
                 val channel = NotificationChannel(
-                    "your_channel_id", "Music Service Channel", NotificationManager.IMPORTANCE_DEFAULT
+                    CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT
                 )
                 notificationManager.createNotificationChannel(channel)
             }

@@ -49,7 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import online.song.onlinesong.Events.dataSong
+
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 
@@ -82,9 +82,9 @@ fun Searchbar(
     navController: NavController,
 //    click:()->Unit
 ) {
-    val data = dataSong()
+//    val data = dataSong()
     var actives by remember { mutableStateOf(active) }
-    var search by remember { mutableStateOf(data.search) }
+//    var search by remember { mutableStateOf(data.search) }
 
     // Animated padding and visibility
     val animatedPaddingH by animateDpAsState(
@@ -113,7 +113,7 @@ fun Searchbar(
     ) {
 
         SearchBar(
-            query = search,
+            query = "search",
             modifier = Modifier
                 .weight(1f)
                 .padding(end = if (actives) 0.dp else 14.dp , start = if (actives) 0.dp else 14.dp)
@@ -128,7 +128,7 @@ fun Searchbar(
                     focusedTextColor = Color.White,
                 )
             ),
-            onQueryChange = { search = it },
+            onQueryChange = { "search = it "},
             onSearch = {},
             active = actives,
             onActiveChange = { actives = it },
@@ -166,7 +166,7 @@ fun Searchbar(
                     }
                 }
                 else{
-                    search = ""
+                   ""
                 }
             },
             trailingIcon = {
