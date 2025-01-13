@@ -1,8 +1,10 @@
 package online.song.onlinesong.Screens
 
+import android.Manifest.permission
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -77,6 +79,9 @@ import online.song.onlinesong.R
 import online.song.onlinesong.Service.Service
 import online.song.onlinesong.Service.Util
 import online.song.onlinesong.ViewModel.songVM
+import androidx.core.content.ContextCompat
+import androidx.media3.exoplayer.offline.DownloadService.startForeground
+import online.song.onlinesong.Service.MusicService
 
 /**
  * @author Hamza Ouaissa
@@ -90,7 +95,7 @@ fun playSong(
     name: String,
     nameS: String,
     list: List<String>,
-    userData: UserData?,
+    userData: UserData?
 ) {
 
 
@@ -102,7 +107,7 @@ fun playSong(
     var isAdd = viewModel.isAdd.observeAsState(Boolean)
 
     val PS = remember { mutableLongStateOf(0L) }
-
+    val lists = remember { mutableListOf<String>() }
 
     var totalTime = remember { mutableStateOf("00:00") }
     var nam = remember { mutableStateOf("Loading...") }
@@ -120,16 +125,19 @@ fun playSong(
 
 
 
+
+
     fun sendBroadcastAction(context: Context, action: String) {
         val intent = Intent(action)
         context.sendBroadcast(intent)
     }
-    LaunchedEffect(Unit) {
-        // Example: Sending a play broadcast when the composable starts
-        sendBroadcastAction(navController.context, Util.ACTION_PLAY)
-
-
-    }
+//    var permission = android.Manifest.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
+//    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+//        permission = android.Manifest.permission.READ_MEDIA_AUDIO
+//    } else {
+//        permission = android.Manifest.permission.READ_EXTERNAL_STORAGE
+//    }
+//
 
     // Example: Slider value change broadcast
     LaunchedEffect(valueSlider.value) {
@@ -155,6 +163,12 @@ fun playSong(
     }
 
 
+    LaunchedEffect(songList.value) {
+        songList.value.forEach() {
+            lists.add(it.toString())
+        }
+
+    }
 
 
 
@@ -177,10 +191,13 @@ fun playSong(
                         totalDuration.longValue = exoPlayer.duration
                         PS.longValue = exoPlayer.currentPosition
 
+                        val serviceIntent = Intent(navController.context, MusicService::class.java)
+                        navController.context.startService(serviceIntent)
                         nam.value = list[exoPlayer.currentMediaItemIndex].toString()
                         if (userData != null) {
                             viewModel.check(list[exoPlayer.currentMediaItemIndex], userData)
                         }
+
 
                     }
 
@@ -381,8 +398,20 @@ fun playSong(
 
                 IconButton(
                     onClick = {
+
                         viewModel.Action(SongEvent.PREV,navController.context)
-                        Service().showNotification(nam.value,name, navController.context, exoPlayer, isPlaying = true)  // Update with the current song info
+
+
+                        val intent = Intent(navController.context, MusicService::class.java).apply {
+                            putExtra(Util.ACTION_PREV,  SongEvent.PREV)
+                            putStringArrayListExtra("SONG_LIST", ArrayList(lists)) // Replace `songList` with your actual data
+                            putExtra("NUMBER", o.intValue)
+                            putExtra("NAME_S", nam.value)
+                            putExtra("ARTS", name)
+                        }
+                        navController.context.sendBroadcast(intent)
+
+                         // Update with the current song info
                 })
                 {
                     Icon(
@@ -398,11 +427,28 @@ fun playSong(
                 Button(
                     onClick = {
                         if (isPlaying.value == true){
+                            val intent = Intent(navController.context, MusicService::class.java).apply {
+                                putExtra(Util.ACTION_PAUSE,  SongEvent.PAUSE)
+                                putStringArrayListExtra("SONG_LIST", ArrayList(lists)) // Replace `songList` with your actual data
+                                putExtra("NUMBER", o.intValue)
+                                putExtra("NAME_S", nam.value)
+                                putExtra("ARTS", name)
+                            }
+                            navController.context.sendBroadcast(intent)
                             viewModel.Action(SongEvent.PAUSE,navController.context)
-                            Service().showNotification(nam.value,name, navController.context, exoPlayer, isPlaying = false)
+                            val serviceIntent = Intent(navController.context, MusicService::class.java)
+                            navController.context.stopService(serviceIntent)
                         }else{
+                            val intent = Intent(navController.context, MusicService::class.java).apply {
+                                putExtra(Util.ACTION_PLAY,  SongEvent.PLAY)
+                                putStringArrayListExtra("SONG_LIST", ArrayList(lists)) // Replace `songList` with your actual data
+                                putExtra("NUMBER", o.intValue)
+                                putExtra("NAME_S", nam.value)
+                                putExtra("ARTS", name)
+                            }
+                            navController.context.sendBroadcast(intent)
                             viewModel.Action(SongEvent.PLAY,navController.context)
-                            Service().showNotification(nam.value,name,navController.context,exoPlayer, isPlaying = true)
+                            Service().showNotification(nam.value,name,navController.context,exoPlayer,isPlaying.value)
                         }
 
 
@@ -422,9 +468,16 @@ fun playSong(
                 Spacer(modifier = Modifier.weight(0.1f))
 
                 IconButton(onClick = {
-
+                    val intent = Intent(navController.context, MusicService::class.java).apply {
+                        putExtra(Util.ACTION_NEXT,  SongEvent.NEXT)
+                        putStringArrayListExtra("SONG_LIST", ArrayList(lists)) // Replace `songList` with your actual data
+                        putExtra("NUMBER", o.intValue)
+                        putExtra("NAME_S", nam.value)
+                        putExtra("ARTS", name)
+                    }
+                    navController.context.sendBroadcast(intent)
                     viewModel.Action(SongEvent.NEXT,navController.context)
-                    Service().showNotification(nam.value,name, navController.context, exoPlayer, isPlaying = true)  // Update with the current song info
+
 
                 })
                 {
