@@ -2,7 +2,9 @@ package online.song.onlinesong.ViewModel
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -24,10 +26,15 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
+import online.song.onlinesong.Events.MusicData
+import online.song.onlinesong.Events.MusicState
 import online.song.onlinesong.Events.PlayerAction
 import online.song.onlinesong.Events.PlayerState
 import online.song.onlinesong.Events.SongEvent
@@ -36,8 +43,11 @@ import online.song.onlinesong.LoginWithGoogle.SignResult
 import online.song.onlinesong.LoginWithGoogle.UserData
 import online.song.onlinesong.Screens.TotalTime
 import online.song.onlinesong.Service.Service
+import java.util.concurrent.TimeUnit
 import kotlin.collections.MutableList
 import kotlin.collections.contains
+import kotlin.math.roundToLong
+import kotlin.time.Duration
 import kotlin.toString
 
 class songVM(application: Application) : AndroidViewModel(application) {
@@ -46,6 +56,9 @@ class songVM(application: Application) : AndroidViewModel(application) {
     private val _state = MutableStateFlow(SignInState())
     val state = _state.asStateFlow()
 
+    private val _musicState = MutableStateFlow(MusicState())
+    val musicState: StateFlow<MusicState> = _musicState
+    private var stopCounter = false
     private var _isPlaying =  MutableLiveData<Boolean>()
     val isPlaying: LiveData<Boolean> get() = _isPlaying
     private val _items = MutableLiveData<MutableList<MediaItem>>(mutableListOf<MediaItem>())
@@ -60,7 +73,7 @@ class songVM(application: Application) : AndroidViewModel(application) {
             is SongEvent.NEXT -> next()
             is SongEvent.PREV ->  prev()
             is SongEvent.Favorit -> favorit(event.name,event.result,event.singer,context)
-            is SongEvent.checkFavoriteSong  -> checkForFavorite(event.result)
+            is SongEvent.CheckFavoriteSong  -> checkForFavorite(event.result)
             is SongEvent.ListSong -> listS(event.list,context)
 
         }
@@ -69,13 +82,16 @@ class songVM(application: Application) : AndroidViewModel(application) {
 
 
     private fun listS(list: List<String>,context: Context) {
+
         val currentList = _items.value ?: mutableListOf<MediaItem>()
         for (index in 0 until list.size) {
             val item = getSongs(list[index], context)
             if (items.value?.contains(MediaItem.fromUri(item))  == false) {
                 currentList.add(index, MediaItem.fromUri(item))
+
             }
         }
+
         _items.value = currentList
 
     }
@@ -85,12 +101,15 @@ class songVM(application: Application) : AndroidViewModel(application) {
             exoPlayer.play()
         // Update the state to reflect the current playback state
         _isPlaying.value = exoPlayer.isPlaying
+
+
     }
 
     private fun pause() {
             exoPlayer.pause()
         // Update the state to reflect the current playback state
         _isPlaying.value = exoPlayer.isPlaying
+
     }
 
     private fun next() {
@@ -99,6 +118,7 @@ class songVM(application: Application) : AndroidViewModel(application) {
         } else {
             exoPlayer.seekTo(0, 0) // Loop to the first item
         }
+
     }
 
     private fun prev() {
@@ -107,7 +127,9 @@ class songVM(application: Application) : AndroidViewModel(application) {
         } else {
             exoPlayer.seekTo(exoPlayer.mediaItemCount - 1, 0) // Loop to the last item
         }
+
     }
+
 
     fun onSignInResult(result: SignResult) {
         _state.update {
@@ -437,7 +459,6 @@ class songVM(application: Application) : AndroidViewModel(application) {
 
 
     }
-
 
 
     private val _isAdd = MutableLiveData<Boolean>()
