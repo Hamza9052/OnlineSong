@@ -2,6 +2,8 @@ package online.song.onlinesong.ViewModel
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.app.Notification
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -13,17 +15,26 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
+import androidx.media3.ui.PlayerNotificationManager
 import androidx.navigation.NavController
 import com.cloudinary.Cloudinary
+
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,29 +53,45 @@ import online.song.onlinesong.LoginWithGoogle.SignInState
 import online.song.onlinesong.LoginWithGoogle.SignResult
 import online.song.onlinesong.LoginWithGoogle.UserData
 import online.song.onlinesong.Screens.TotalTime
+import online.song.onlinesong.Service.MediaNotificationManager
 import online.song.onlinesong.Service.Service
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 import kotlin.collections.MutableList
 import kotlin.collections.contains
 import kotlin.math.roundToLong
 import kotlin.time.Duration
 import kotlin.toString
 
-class songVM(application: Application) : AndroidViewModel(application) {
+const val SESSION_INTENT_REQUEST_CODE = 1001
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@HiltViewModel
+class songVM @Inject constructor(application: Application) : ViewModel() {
+
 
 
     private val _state = MutableStateFlow(SignInState())
     val state = _state.asStateFlow()
+    fun setIsPlaying(isPlaying: Boolean) {
+        _isPlaying.postValue(isPlaying)
+    }
 
-    private val _musicState = MutableStateFlow(MusicState())
-    val musicState: StateFlow<MusicState> = _musicState
-    private var stopCounter = false
+
     private var _isPlaying =  MutableLiveData<Boolean>()
     val isPlaying: LiveData<Boolean> get() = _isPlaying
     private val _items = MutableLiveData<MutableList<MediaItem>>(mutableListOf<MediaItem>())
     val exoPlayer = ExoPlayer.Builder(application).build()
     // Expose the LiveData as a read-only List<String> to the observers.
     val items: LiveData<List<MediaItem>> get() = _items.map { it.toList() }
+
+
+
+    private lateinit var notificationManager: MediaNotificationManager
+    protected lateinit var mediaSession: MediaSession
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+    private var isStarted = false
+
 
     fun Action(event: SongEvent, context: Context) {
         when (event) {
@@ -130,7 +157,127 @@ class songVM(application: Application) : AndroidViewModel(application) {
 
     }
 
+    private var _CurrentT =  MutableLiveData<String>()
+    val CurrentT: LiveData<String> get() = _CurrentT
+    private var _totalDuration =  MutableLiveData<Long>()
+    val totalDuration: LiveData<Long> get() = _totalDuration
+    private var _PS =  MutableLiveData<Long>()
+    val PS: LiveData<Long> get() = _PS
+    private var _nam =  MutableLiveData<String>()
+    val nam: LiveData<String> get() = _nam
+    private var _repeatMod =  MutableLiveData<Int>()
+    val repeatMod: LiveData<Int> get() = _repeatMod
+    private var _shuffleMode =  MutableLiveData<Boolean>()
+    val shuffleMode: LiveData<Boolean> get() = _shuffleMode
 
+    fun preparePlayer(context: Context,songList: List<MediaItem>,userData: UserData?,list: List<String>,o:Int) {
+        exoPlayer.setMediaItems(songList)
+        exoPlayer.seekToDefaultPosition(o)
+        exoPlayer.prepare()
+        val playerListener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                when (playbackState) {
+                    Player.STATE_READY -> {
+                        _CurrentT.value = TotalTime(exoPlayer.duration)
+                        _totalDuration.value = exoPlayer.duration
+                        _PS.value = exoPlayer.currentPosition
+
+
+                        _nam.value = list[exoPlayer.currentMediaItemIndex].toString()
+                        if (userData != null) {
+                            check(list[exoPlayer.currentMediaItemIndex], userData)
+                        }
+
+                        notificationManager.showNotificationForPlayer(exoPlayer)
+                    }
+
+                    Player.STATE_ENDED -> {
+                        // Handle end of playback, if needed
+                        exoPlayer.seekToNext()
+                    }
+                    else -> {
+                        notificationManager.hideNotification()
+                    }
+
+
+                }
+
+            }
+
+            override fun onRepeatModeChanged(repeatMode: Int) {
+                _repeatMod.value = repeatMode
+            }
+
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                _shuffleMode.value = shuffleModeEnabled
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                Log.d("Error", "onIsPlayingChanged: ${isPlaying}")
+                super.onIsPlayingChanged(isPlaying)
+                _isPlaying.value = isPlaying
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                super.onPlayerError(error)
+                Log.e("Error", "Error: ${error.message}")
+            }
+        }
+        exoPlayer.addListener(playerListener)
+
+        onStart(context)
+
+
+
+    }
+
+
+    fun onStart(context: Context) {
+        if (isStarted) return
+
+        isStarted = true
+
+        // Build a PendingIntent that can be used to launch the UI.
+        val sessionActivityPendingIntent =
+            context.packageManager?.getLaunchIntentForPackage(context.packageName)
+                ?.let { sessionIntent ->
+                    PendingIntent.getActivity(
+                        context,
+                        SESSION_INTENT_REQUEST_CODE,
+                        sessionIntent,
+                        PendingIntent.FLAG_IMMUTABLE
+                    )
+                }
+
+        // Create a new MediaSession.
+        mediaSession = MediaSession.Builder(context, exoPlayer )
+            .setSessionActivity(sessionActivityPendingIntent!!).build()
+
+        notificationManager = MediaNotificationManager(
+                context,
+                mediaSession.token,
+                exoPlayer,
+                PlayerNotificationListener()
+            )
+
+
+        notificationManager.showNotificationForPlayer(exoPlayer)
+    }
+
+
+    private inner class PlayerNotificationListener : PlayerNotificationManager.NotificationListener {
+        override fun onNotificationPosted(
+            notificationId: Int,
+            notification: Notification,
+            ongoing: Boolean
+        ) {
+
+        }
+
+        override fun onNotificationCancelled(notificationId: Int, dismissedByUser: Boolean) {
+
+        }
+    }
     fun onSignInResult(result: SignResult) {
         _state.update {
             it.copy(
@@ -632,7 +779,15 @@ private fun TTime(lon: Long): String {
     return "$minutesString:$secondsString"
 }
 
-
+class SongViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return if (modelClass.isAssignableFrom(songVM::class.java)) {
+            songVM(application ) as T
+        } else {
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
+    }
+}
 
 // I need current index of song
 
