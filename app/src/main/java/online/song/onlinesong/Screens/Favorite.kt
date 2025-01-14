@@ -80,7 +80,7 @@ fun Favorite(
     val list = remember { mutableListOf<String>() }
 
     LaunchedEffect(userData) {
-        viewModel.Action(SongEvent.checkFavoriteSong(userData!!),navController.context)
+        viewModel.Action(SongEvent.CheckFavoriteSong(userData!!),navController.context)
     }
     Scaffold(
          topBar = {
@@ -123,7 +123,7 @@ fun Favorite(
                 onRefresh = {
                     isRefreshing.value == true
                     scope.launch{
-                        viewModel.Action(SongEvent.checkFavoriteSong(userData!!),navController.context)
+                        viewModel.Action(SongEvent.CheckFavoriteSong(userData!!),navController.context)
                     }
                 }) {
 

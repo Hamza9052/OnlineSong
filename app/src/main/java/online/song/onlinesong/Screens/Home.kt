@@ -68,7 +68,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.launch
-import online.song.onlinesong.Events.dataSong
+
 import online.song.onlinesong.LoginWithGoogle.SignInState
 import online.song.onlinesong.LoginWithGoogle.UserData
 
@@ -120,8 +120,8 @@ fun Home(
         "Kiwi",
         "Lemon"
     )
-    var data = dataSong()
-    data.list = songs
+
+   
     val lazyGridState = rememberLazyListState()
     val lazyRowState = rememberLazyListState()
     val scope = rememberCoroutineScope()

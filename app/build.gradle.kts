@@ -4,7 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
     id ("kotlin-parcelize")
-//    id("com.google.devtools.ksp") // Use KSP instead of kapt
+    id("kotlin-kapt")
+
 }
 
 android {
@@ -76,6 +77,7 @@ dependencies {
     //Refresh
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.28.0")
     implementation ("androidx.compose.material:material:1.7.5")
+
     // Coil
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
     implementation ("io.coil-kt:coil-compose:2.4.0")
@@ -95,6 +97,7 @@ dependencies {
     //ExoPlayer
     implementation ("androidx.media3:media3-exoplayer:1.5.0")
     implementation ("androidx.media3:media3-session:1.5.0")
+    implementation ("androidx.media3:media3-ui:1.0.3")
 
     //Refresh
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.28.0")
@@ -105,6 +108,15 @@ dependencies {
     //MediaSession
     implementation ("androidx.media:media:1.7.0")
     implementation ("androidx.media2:media2-session:1.3.0")
+    implementation ("com.google.android.exoplayer:exoplayer-core:2.19.1")
+    implementation ("com.google.android.exoplayer:exoplayer-hls:2.19.1")
+    implementation ("com.google.android.exoplayer:exoplayer-ui:2.19.1")
+    implementation ("com.google.android.exoplayer:exoplayer:2.19.1")
+
+    implementation ("com.google.dagger:hilt-android:2.52")
+    kapt ("com.google.dagger:hilt-compiler:2.40.5")
+    implementation ("androidx.hilt:hilt-lifecycle-viewmodel:1.0.0-alpha03")
+    kapt ("androidx.hilt:hilt-compiler:1.0.0")
 
 }
 
