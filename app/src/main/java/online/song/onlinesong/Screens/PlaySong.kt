@@ -45,9 +45,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,27 +59,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.google.android.exoplayer2.Player
 import online.song.onlinesong.Events.SongEvent
 import online.song.onlinesong.LoginWithGoogle.UserData
 import online.song.onlinesong.R
-import online.song.onlinesong.Service.Service
 import online.song.onlinesong.Service.Util
 import online.song.onlinesong.ViewModel.songVM
-import androidx.core.content.ContextCompat
-import androidx.media3.exoplayer.offline.DownloadService.startForeground
-import online.song.onlinesong.Service.MusicService
+
+
 
 /**
  * @author Hamza Ouaissa
@@ -100,17 +88,18 @@ fun playSong(
 
 
     var exoPlayer = viewModel.exoPlayer
-    val shuffleMode = remember { mutableStateOf(exoPlayer.shuffleModeEnabled) }
-    val repeatMod = remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
+    val shuffleMode =viewModel.shuffleMode.observeAsState(false)
+    val repeatMod = viewModel.repeatMod.observeAsState(0)
     var songList = viewModel.items.observeAsState(emptyList())
     var isPlaying = viewModel.isPlaying.observeAsState(false)
     var isAdd = viewModel.isAdd.observeAsState(Boolean)
 
-    val PS = remember { mutableLongStateOf(0L) }
+    val PS = viewModel.PS.observeAsState(0L)
     val lists = remember { mutableListOf<String>() }
 
-    var totalTime = remember { mutableStateOf("00:00") }
-    var nam = remember { mutableStateOf("Loading...") }
+    val totalDuration = viewModel.totalDuration.observeAsState(0L)
+    var totalTime = viewModel.CurrentT.observeAsState("00:00")
+    var nam = viewModel.nam.observeAsState("Loading...")
     var currentTime = viewModel.currentTime.observeAsState(initial = "")
     val valueSlider = viewModel.valueSlider.observeAsState(initial = 0f)
 
@@ -127,10 +116,7 @@ fun playSong(
 
 
 
-    fun sendBroadcastAction(context: Context, action: String) {
-        val intent = Intent(action)
-        context.sendBroadcast(intent)
-    }
+
 //    var permission = android.Manifest.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
 //    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
 //        permission = android.Manifest.permission.READ_MEDIA_AUDIO
@@ -153,7 +139,7 @@ fun playSong(
             .placeholder(R.drawable.logo)
             .build()
     )
-    val totalDuration = remember { mutableLongStateOf(0L) }
+
     var o = remember { mutableIntStateOf(0) }
     for (l in 0 until list.size) {
         if (list[l] == nameS) {
@@ -179,49 +165,9 @@ fun playSong(
             exoPlayer.release()
         }
     }
-    LaunchedEffect(exoPlayer, o.intValue, songList, userData) {
-        exoPlayer.setMediaItems(songList.value)
-        exoPlayer.seekToDefaultPosition(o.intValue)
-        exoPlayer.prepare()
-        exoPlayer.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                when (playbackState) {
-                    Player.STATE_READY -> {
-                        totalTime.value = TotalTime(exoPlayer.duration)
-                        totalDuration.longValue = exoPlayer.duration
-                        PS.longValue = exoPlayer.currentPosition
+    LaunchedEffect(exoPlayer, o.intValue, songList, userData,navController) {
 
-                        val serviceIntent = Intent(navController.context, MusicService::class.java)
-                        navController.context.startService(serviceIntent)
-                        nam.value = list[exoPlayer.currentMediaItemIndex].toString()
-                        if (userData != null) {
-                            viewModel.check(list[exoPlayer.currentMediaItemIndex], userData)
-                        }
-
-
-                    }
-
-                    Player.STATE_ENDED -> {
-                        // Handle end of playback, if needed
-                        exoPlayer.seekToNext()
-                    }
-
-
-
-                }
-
-            }
-
-            override fun onRepeatModeChanged(repeatMode: Int) {
-                repeatMod.intValue = repeatMode
-            }
-
-            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-                shuffleMode.value = shuffleModeEnabled
-            }
-
-
-        })
+        viewModel.preparePlayer(navController.context,songList.value,userData,list,o.intValue)
     }
 
 
@@ -327,7 +273,7 @@ fun playSong(
                     onValueChange = {
                         exoPlayer.seekTo(it.toLong())
                     },
-                    valueRange = 0f..(totalDuration.longValue ?: 1L).toFloat(),
+                    valueRange = 0f..(totalDuration.value ?: 1L).toFloat(),
                     thumb = {
                         Box(
                             modifier = Modifier
@@ -399,18 +345,8 @@ fun playSong(
                 IconButton(
                     onClick = {
 
+//                        viewModel.Action(SongEvent.PREV,navController.context)
                         viewModel.Action(SongEvent.PREV,navController.context)
-
-
-                        val intent = Intent(navController.context, MusicService::class.java).apply {
-                            putExtra(Util.ACTION_PREV,  SongEvent.PREV)
-                            putStringArrayListExtra("SONG_LIST", ArrayList(lists)) // Replace `songList` with your actual data
-                            putExtra("NUMBER", o.intValue)
-                            putExtra("NAME_S", nam.value)
-                            putExtra("ARTS", name)
-                        }
-                        navController.context.sendBroadcast(intent)
-
                          // Update with the current song info
                 })
                 {
@@ -427,30 +363,10 @@ fun playSong(
                 Button(
                     onClick = {
                         if (isPlaying.value == true){
-                            val intent = Intent(navController.context, MusicService::class.java).apply {
-                                putExtra(Util.ACTION_PAUSE,  SongEvent.PAUSE)
-                                putStringArrayListExtra("SONG_LIST", ArrayList(lists)) // Replace `songList` with your actual data
-                                putExtra("NUMBER", o.intValue)
-                                putExtra("NAME_S", nam.value)
-                                putExtra("ARTS", name)
-                            }
-                            navController.context.sendBroadcast(intent)
                             viewModel.Action(SongEvent.PAUSE,navController.context)
-                            val serviceIntent = Intent(navController.context, MusicService::class.java)
-                            navController.context.stopService(serviceIntent)
                         }else{
-                            val intent = Intent(navController.context, MusicService::class.java).apply {
-                                putExtra(Util.ACTION_PLAY,  SongEvent.PLAY)
-                                putStringArrayListExtra("SONG_LIST", ArrayList(lists)) // Replace `songList` with your actual data
-                                putExtra("NUMBER", o.intValue)
-                                putExtra("NAME_S", nam.value)
-                                putExtra("ARTS", name)
-                            }
-                            navController.context.sendBroadcast(intent)
                             viewModel.Action(SongEvent.PLAY,navController.context)
-                            Service().showNotification(nam.value,name,navController.context,exoPlayer,isPlaying.value)
                         }
-
 
                     },
                     shape = CircleShape,
@@ -468,16 +384,7 @@ fun playSong(
                 Spacer(modifier = Modifier.weight(0.1f))
 
                 IconButton(onClick = {
-                    val intent = Intent(navController.context, MusicService::class.java).apply {
-                        putExtra(Util.ACTION_NEXT,  SongEvent.NEXT)
-                        putStringArrayListExtra("SONG_LIST", ArrayList(lists)) // Replace `songList` with your actual data
-                        putExtra("NUMBER", o.intValue)
-                        putExtra("NAME_S", nam.value)
-                        putExtra("ARTS", name)
-                    }
-                    navController.context.sendBroadcast(intent)
-                    viewModel.Action(SongEvent.NEXT,navController.context)
-
+                viewModel.Action(SongEvent.NEXT,navController.context)
 
                 })
                 {
@@ -492,12 +399,12 @@ fun playSong(
                 Spacer(modifier = Modifier.weight(0.3f))
 
                 IconButton(onClick = {
-                    if (exoPlayer.repeatMode == repeatMod.intValue) {
-                        repeatMod.intValue = Player.REPEAT_MODE_ONE
-                        exoPlayer.repeatMode = repeatMod.intValue
+                    if (exoPlayer.repeatMode == repeatMod.value) {
+//                        repeatMod.value = Player.REPEAT_MODE_ONE
+                        exoPlayer.repeatMode = repeatMod.value
                     } else {
-                        repeatMod.intValue = Player.REPEAT_MODE_OFF
-                        exoPlayer.repeatMode = repeatMod.intValue
+//                        repeatMod.value = Player.REPEAT_MODE_OFF
+                        exoPlayer.repeatMode = repeatMod.value
                     }
                 }) {
                     Icon(
