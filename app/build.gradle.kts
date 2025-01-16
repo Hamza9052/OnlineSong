@@ -98,6 +98,19 @@ dependencies {
     implementation ("androidx.media3:media3-exoplayer:1.5.0")
     implementation ("androidx.media3:media3-session:1.5.0")
     implementation ("androidx.media3:media3-ui:1.0.3")
+    implementation (files("C:\\Users\\Hamza\\AndroidStudioProjects\\OnlineSong\\app\\spotify-app-remote-release-0.8.0.aar"))
+    //Spotify
+
+    implementation ("com.spotify.android:auth:2.1.0") // Maven dependency
+
+    // All other dependencies for your app should also be here:
+    implementation ("androidx.browser:browser:1.8.0")
+    implementation ("com.spotify.sdk:spotify-app-remote-release:0.7.2")
+    //For advanced use cases like searching, fetching user playlists, or analyzing tracks, you can use the Spotify Web API.
+    // It doesn't require an SDK dependency but uses HTTP requests.
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation ("com.squareup.okhttp3:logging-interceptor:4.10.0")
 
     //Refresh
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.28.0")
