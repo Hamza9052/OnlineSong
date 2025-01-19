@@ -21,15 +21,29 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["redirectSchemeName"] = "http"
+        manifestPlaceholders["redirectHostName"] = "localhost"
+        buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"0102b15d08e642e884897fa1b5bb3223\"")
+        buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"cfb60949e6ab4231abb69cfcffce642a\"")
     }
 
+    buildFeatures {
+        buildConfig = true  // Enable BuildConfig feature
+    }
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+            buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"0102b15d08e642e884897fa1b5bb3223\"")
+            buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"cfb60949e6ab4231abb69cfcffce642a\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"0102b15d08e642e884897fa1b5bb3223\"")
+            buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"cfb60949e6ab4231abb69cfcffce642a\"")
         }
     }
     compileOptions {
@@ -104,8 +118,6 @@ dependencies {
     implementation ("com.spotify.android:auth:2.1.0") // Maven dependency
 
     // All other dependencies for your app should also be here:
-    implementation ("androidx.browser:browser:1.8.0")
-    implementation ("com.spotify.sdk:spotify-app-remote-release:0.7.2")
     //For advanced use cases like searching, fetching user playlists, or analyzing tracks, you can use the Spotify Web API.
     // It doesn't require an SDK dependency but uses HTTP requests.
     implementation ("com.squareup.retrofit2:retrofit:2.9.0")

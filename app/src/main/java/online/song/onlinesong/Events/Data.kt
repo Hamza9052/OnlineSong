@@ -1,19 +1,32 @@
 package online.song.onlinesong.Events
 
+
 data class Playlist(
-    val id: String,
-    val name: String,
-    val uri: String
+    val id: String,                     // Playlist ID
+    val name: String,                   // Playlist name
+    val description: String?,           // Playlist description (nullable)
+    val images: List<Image>,            // Playlist images
+    val tracks: PlaylistTracks          // Tracks in the playlist
 )
 
-// Model class for Track
-data class Track(
-    val id: String,
-    val name: String,
-    val uri: String,
-    val artists: List<Artist>,
-    val album: Album
+
+data class PlaylistTracks(
+    val items: List<PlaylistTrackItem>, // List of track items
+    val total: Int                      // Total number of tracks
 )
+
+data class PlaylistTrackItem(
+    val track: Track                    // Track details
+)
+
+data class Track(
+    val id: String,                     // Track ID
+    val name: String,                   // Track name
+    val preview_url: String?,           // URL to a 30-second preview of the track
+    val album: Album,                   // Album details
+    val artists: List<Artist>           // List of artists for the track
+)
+
 
 // Model class for Artist
 data class Artist(
