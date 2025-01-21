@@ -25,6 +25,8 @@ android {
         manifestPlaceholders["redirectHostName"] = "localhost"
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"0102b15d08e642e884897fa1b5bb3223\"")
         buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"cfb60949e6ab4231abb69cfcffce642a\"")
+        buildConfigField("String", "Redirect_Uri", "\"http://localhost:8888/callback\"")
+
     }
 
     buildFeatures {
@@ -35,6 +37,7 @@ android {
             isMinifyEnabled = false
             buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"0102b15d08e642e884897fa1b5bb3223\"")
             buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"cfb60949e6ab4231abb69cfcffce642a\"")
+            buildConfigField("String", "Redirect_Uri", "\"http://localhost:8888/callback\"")
         }
         release {
             isMinifyEnabled = false
@@ -44,6 +47,7 @@ android {
             )
             buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"0102b15d08e642e884897fa1b5bb3223\"")
             buildConfigField("String", "SPOTIFY_CLIENT_SECRET", "\"cfb60949e6ab4231abb69cfcffce642a\"")
+            buildConfigField("String", "Redirect_Uri", "\"http://localhost:8888/callback\"")
         }
     }
     compileOptions {

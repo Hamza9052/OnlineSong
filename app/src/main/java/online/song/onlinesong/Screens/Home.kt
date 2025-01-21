@@ -26,6 +26,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
@@ -33,21 +37,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.RadioButton
-import androidx.compose.material.RadioButtonDefaults
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,15 +57,24 @@ import coil.request.ImageRequest
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.isTraceInProgress
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.time.delay
+import kotlinx.coroutines.withContext
+import online.song.onlinesong.Events.Playlist
 
 import online.song.onlinesong.LoginWithGoogle.SignInState
 import online.song.onlinesong.LoginWithGoogle.UserData
@@ -85,54 +92,47 @@ fun Home(
 ) {
 
 
-    val names_types = VM.Categories.observeAsState(emptyList<String>())
+
     var isLoading = VM.isLoading.observeAsState(Boolean)
-    var CatisLoading = VM.CatisLoading.observeAsState(Boolean)
-    val pop = VM.ListSingerCata.observeAsState(emptyMap<String, List<String>>())
+//    var CatisLoading = VM.CatisLoading.observeAsState(Boolean)
+//    val pop = VM.ListSingerCata.observeAsState(emptyMap<String, List<String>>())
+
+
+    var PlayLists = remember { mutableListOf<String>(
+        "47gSXaPgD5Ln7fs8YkPJEW"
+        ,"519II5E4pZryeyySl2YLgn"
+        ,"4lbTi1TTzjvYmOGh1x4IIx"
+        ,"4Hzg3lPUjWjMvlKmXHBRL9"
+        ,"2SM6rniZl84fEyMCB5KMQB"
+        ,"0eGfpDb1TTvxIXdMk5DyyD"
+        ,"6ZNoF0voOucfax96hu1lRm"
+        ,"4zQDKb9McbC7T7yiJT6Oqy"
+        ,"1AyxSpveGEJsBaGZubIKo8"
+        ,"6fqaB0I1gHgNy4TaPphgro"
+        ,"3GQvSbCBLWctClpYZXSYUG"
+        ,"3mgNDhdzgwoAxlAI29VdzN"
+    ) }
+
     LaunchedEffect(Unit) {
-        VM.getname()
+        // Fetch each playlist one by one
+                VM.fetchPlaylistAsync()
+
+
     }
 
+     val album by VM.albumDetails.collectAsState()
 
-    var songs = listOf<String>(
-        "Hamza",
-        "Ilias",
-        "??????",
-        "khadija",
-        "farah",
-        "test",
-        "case",
-        "pc",
-        "pause",
-        "flow",
-        "Barca",
-        "for",
-        "me",
-        "this",
-        "Apple",
-        "Banana",
-        "Cherry",
-        "Date",
-        "Elderberry",
-        "Fig",
-        "Grape",
-        "Honeydew",
-        "Kiwi",
-        "Lemon"
-    )
-
-   
-    val lazyGridState = rememberLazyListState()
-    val lazyRowState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
+    val lazyGridState = rememberLazyGridState()
+//    val lazyRowState = rememberLazyListState()
+//    val scope = rememberCoroutineScope()
 
 
     val scrollOffset = derivedStateOf {
         lazyGridState.firstVisibleItemScrollOffset
     }
-    val rowHeight by animateDpAsState(
-        targetValue = if (scrollOffset.value > 0) 60.dp else 150.dp, animationSpec = tween(1000)
-    )
+//    val rowHeight by animateDpAsState(
+//        targetValue = if (scrollOffset.value > 0) 60.dp else 150.dp, animationSpec = tween(1000)
+//    )
     val text by animateDpAsState(
         targetValue = if (scrollOffset.value > 0) 0.dp else 8.dp, animationSpec = tween(1000)
     )
@@ -160,7 +160,7 @@ fun Home(
         Spacer(modifier = Modifier.height(Height))
 
         Text(
-            text = "Categories",
+            text = "Profile",
             fontWeight = FontWeight.Bold,
             fontSize = 30.sp,
             color = Color.White,
@@ -169,17 +169,29 @@ fun Home(
                 .alpha(VisibiltyOfText)
                 .align(alignment = Alignment.Start)
         )
+        val allLoadedState = remember { mutableStateOf(false) }
 
-        if (isLoading.value == true && names_types.value.isEmpty() ) {
-            Spacer(modifier = Modifier.weight(0.3f))
-               LazyRow(
-                   horizontalArrangement = Arrangement.spacedBy(15.dp)
-               ) {
-                   items(10) { index ->
-                       Process()
-                   }
+        // Check if all images are loaded
+        val painters = PlayLists.map { playlistId ->
+            rememberAsyncImagePainter(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(album[playlistId]?.images?.firstOrNull()?.url)
+                    .crossfade(true)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .size(100) // Target size in pixels
+                    .build()
+            )
+        }
 
-               }
+        // Determine if all images are loaded
+        LaunchedEffect(painters) {
+            allLoadedState.value = painters.all { it.state !is AsyncImagePainter.State.Loading }
+        }
+
+
+        if (!allLoadedState.value) {
+
 
                Spacer(modifier = Modifier.weight(1f))
                    Process()
@@ -188,7 +200,7 @@ fun Home(
 
 
         }
-        else if (names_types.value.isNotEmpty()) {
+        else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -258,6 +270,7 @@ fun Home(
                                     .alpha(VisibiltyOfText)
                                     .size(80.dp)
                             )
+
                             Spacer(modifier = Modifier.height(5.dp))
                             var nam = ""
                             if (userdata?.userName != null){
@@ -289,165 +302,104 @@ fun Home(
                 }
 
 
-                Spacer(modifier = Modifier.width(8.dp))
+//                Spacer(modifier = Modifier.width(8.dp))
 
 
-            LazyRow(
-                state = lazyRowState,
-                modifier = Modifier
-                    .fillMaxWidth() // Make the LazyRow fill the available width
-                    .height(rowHeight),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+//            LazyRow(
+//                state = lazyRowState,
+//                modifier = Modifier
+//                    .fillMaxWidth() // Make the LazyRow fill the available width
+//                    .height(rowHeight),
+//                horizontalArrangement = Arrangement.SpaceBetween
+//            ) {
+//
+//
+//                items(
+//                    count = names_types.value.size, // Limit to a very large number
+//                ) { index ->
+//
+//
+//
+//
+//                    val nameType =  names_types.value[index]
+//                    val uriImag = VM.getImage(nameType, navController.context)
+//                    val image = rememberAsyncImagePainter(
+//                        model = ImageRequest.Builder(navController.context).data(uriImag)
+//                            .crossfade(true).error(R.drawable.error).placeholder(R.drawable.logo)
+//                            .build()
+//                    )
+//                    val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
+//                    Log.e("Row", "Home:$uriImag ")
+//
+//                    AnimatedVisibility(
+//                        visible = true,
+//                        enter = slideInHorizontally() + fadeIn(),
+//                        exit = slideOutHorizontally() + fadeOut()
+//                    ) {
+//
+//                        Box(
+//                            modifier = Modifier
+//                                .width(100.dp)  // Set fixed width for each item
+//                                .padding(start = text)  // Padding around each item
+//                                .graphicsLayer(scaleX = scale, scaleY = scale)
+//                        ) {
+//
+//                                Item(image, nameType, test,names_types.value)
+//
+//
+//                        }
+//                    }
+//
+//                }
+//            }
+            }
 
 
-                items(
-                    count = names_types.value.size, // Limit to a very large number
-                ) { index ->
+// Track whether all images are loaded
 
 
 
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(100.dp),
+                    modifier = Modifier.padding(start = 8.dp),
+                ){
 
-                    val nameType =  names_types.value[index]
-                    val uriImag = VM.getImage(nameType, navController.context)
-                    val image = rememberAsyncImagePainter(
-                        model = ImageRequest.Builder(navController.context).data(uriImag)
-                            .crossfade(true).error(R.drawable.error).placeholder(R.drawable.logo)
-                            .build()
+
+
+                    items(
+                        album.size,
+                        key = {indx->
+                            PlayLists[indx]
+                        }
                     )
-                    val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(500))
-                    Log.e("Row", "Home:$uriImag ")
-
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInHorizontally() + fadeIn(),
-                        exit = slideOutHorizontally() + fadeOut()
-                    ) {
-
-                        Box(
-                            modifier = Modifier
-                                .width(100.dp)  // Set fixed width for each item
-                                .padding(start = text)  // Padding around each item
-                                .graphicsLayer(scaleX = scale, scaleY = scale)
-                        ) {
-
-                                Item(image, nameType, test,names_types.value)
-
-
-                        }
-                    }
-
-                }
-            }
-            }
-
-
-            LazyColumn(
-                state = lazyGridState,
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                items(
-                    names_types.value.size,
-                    key = {index ->
-                        names_types.value[index].ifEmpty {
-                            "First_key"
-                        }
-                    }
-                ) { index ->
-                    val names = names_types.value[index]
-
-
-                    LaunchedEffect(Unit) {
-                        scope.launch{
-                            VM.pop(names_types.value[index])
-                        }
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        modifier = Modifier.padding(top = 30.dp, bottom = 8.dp)
-                    ) {
-                        Text(
-                            text = names,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 30.sp,
-                            color = Color.White,
+                    {index->
+                        val Playlist =PlayLists.get(index)
+                        val name = album.get(Playlist)?.name ?:"Loading.."
+                        Log.e("Album","${album}  ${PlayLists[index]}")
+                        val imagePainter = rememberAsyncImagePainter(
+                            ImageRequest.Builder(LocalContext.current)
+                                .data(album.get(Playlist)?.images?.firstOrNull()?.url,)
+                                .crossfade(true)
+                                .diskCachePolicy(CachePolicy.ENABLED) // Enable disk caching
+                                .memoryCachePolicy(CachePolicy.ENABLED) //
+                                .size(100) // Specify the target size (in pixels, not dp)
+                                .build()
                         )
-
-                        IconButton(
-                            onClick = {},
-                            ) {
-
-
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "More",
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .padding(bottom = 8.dp),
-                            )
+                        if (imagePainter.state is AsyncImagePainter.State.Loading){
+                            Process()
+                        }else{
+                            Item2(imagePainter,name,navController, PlayLists[index])
                         }
+
                     }
 
 
-
-                        LazyRow(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            var l = 0
-                                Log.e("expe", "Home: ${pop.value[names]} +${names}",)
-                                items(
-                                    3,
-                                    key = {index->
-                                        pop.value[names]?.get(index) ?: l++
-                                    }
-                                ) { index ->
-
-                                    val nameType = pop.value[names]?.get(index) ?: "Loading.."
-                                    val uriImag =
-                                        VM.getImage(nameType.toString(), navController.context)
-                                    val image = rememberAsyncImagePainter(
-                                        model = ImageRequest.Builder(navController.context)
-                                            .data(uriImag)
-                                            .crossfade(true)
-                                            .error(R.drawable.error)
-                                            .placeholder(R.drawable.logo)
-                                            .build()
-                                    )
-                                    val scale by animateFloatAsState(
-                                        targetValue = 1f,
-                                        animationSpec = tween(500)
-                                    )
-
-
-                                    AnimatedVisibility(
-                                        visible = true,
-                                        enter = slideInHorizontally() + fadeIn(),
-                                        exit = slideOutHorizontally() + fadeOut()
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(150.dp)
-                                                .graphicsLayer(scaleX = scale, scaleY = scale)
-                                        ) {
-
-                                            Item2(image, nameType.toString(), navController, names)
-
-                                        }
-                                    }
-                                }
-
-
-                        }
 
 
 
 
                 }
-            }
+
 
         }
         }
@@ -473,6 +425,58 @@ fun Process(
             color = colorResource(R.color.icon),
         )
     }
+
+}
+
+
+@Composable
+fun Item2(
+    image: AsyncImagePainter,
+    type: String,
+    navController: NavController,
+    cat:String
+    ) {
+
+    Box(
+        modifier = Modifier
+            .background(
+                Color.Transparent, RoundedCornerShape(12.dp)
+            )
+            .padding(8.dp)
+            .clickable(onClick = {
+                navController.navigate("list/$cat")
+            })
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+                Image(
+                    painter = image,
+                    contentDescription = "Image Item",
+                    alignment = Alignment.Center,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .background(
+                            Color.Transparent
+                        )
+                        .clip(RoundedCornerShape(20.dp))
+                        .size(100.dp)
+                )
+
+
+
+            Spacer(Modifier.height(5.dp))
+            Text(
+                text = type,
+                color = Color.White,
+                fontSize = 13.sp,
+                minLines = 1
+            )
+        }
+    }
+
 
 }
 
@@ -553,56 +557,6 @@ fun Item(
 
 }
 
-@Composable
-fun Item2(
-    image: AsyncImagePainter,
-    type: String,
-    navController: NavController,
-    cat:String
-    ) {
-
-    Box(
-        modifier = Modifier
-            .background(
-                Color.Transparent, RoundedCornerShape(12.dp)
-            )
-            .padding(0.dp)
-            .clickable(onClick = {
-                navController.navigate("list/$type/$cat")
-            })
-    ) {
-        Column(
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-
-                Image(
-                    painter = image,
-                    contentDescription = "Image Item",
-                    alignment = Alignment.Center,
-                    modifier = Modifier
-                        .background(
-                            Color.Transparent
-                        )
-                        .clip(RoundedCornerShape(20.dp))
-                        .size(120.dp)
-                )
-
-
-
-            Spacer(Modifier.height(5.dp))
-            Text(
-                text = type,
-                color = Color.White,
-                fontSize = 19.sp,
-                minLines = 1
-            )
-        }
-    }
-
-
-}
-
 //var mediaPlayer = MediaPlayer()
 //Log.e("mp3", "Home: ${VM.generateSignedUrl("112")}", )
 //Button(onClick = {
@@ -615,3 +569,79 @@ fun Item2(
 //}){
 //    Text("Play")
 //}
+
+
+
+//            LazyColumn(
+//                state = lazyGridState,
+//                modifier = Modifier.padding(start = 8.dp)
+//            ) {
+//                items(
+//                    names_types.value.size,
+//                    key = {index ->
+//                        names_types.value[index].ifEmpty {
+//                            "First_key"
+//                        }
+//                    }
+//                ) { index ->
+//                    val names = names_types.value[index]
+//
+//
+//                    LaunchedEffect(Unit) {
+//                        scope.launch{
+//                            VM.pop(names_types.value[index])
+//                        }
+//                    }
+//
+//                    Row(
+//                        horizontalArrangement = Arrangement.SpaceAround,
+//                        modifier = Modifier.padding(top = 30.dp, bottom = 8.dp)
+//                    ) {
+//                        Text(
+//                            text = names,
+//                            fontWeight = FontWeight.Bold,
+//                            fontSize = 30.sp,
+//                            color = Color.White,
+//                        )
+//
+//                        IconButton(
+//                            onClick = {},
+//                            ) {
+//                            Icon(
+//                                imageVector = Icons.Default.ChevronRight,
+//                                contentDescription = "More",
+//                                tint = Color.White,
+//                                modifier = Modifier
+//                                    .size(30.dp)
+//                                    .padding(bottom = 8.dp),
+//                            )
+//                        }
+//                    }
+//
+//
+//
+//                        LazyRow(
+//                            modifier = Modifier
+//                                .fillMaxWidth(),
+//                            horizontalArrangement = Arrangement.SpaceBetween
+//                        ) {
+//                            var l = 0
+//                                Log.e("expe", "Home: ${pop.value[names]} +${names}",)
+//                                items(
+//                                    3,
+//                                    key = {index->
+//                                        pop.value[names]?.get(index) ?: l++
+//                                    }
+//                                ) { index ->
+//
+//
+//                                }
+//
+//
+//                        }
+//
+//
+//
+//
+//                }
+//            }

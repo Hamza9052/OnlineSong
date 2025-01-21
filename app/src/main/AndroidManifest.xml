@@ -36,8 +36,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
+
                     android:scheme="http"
-                    android:host="localhost" />
+                    android:host="onlinesongs"
+                    android:pathPrefix="/callback"
+                    />
             </intent-filter>
         </activity>
         <service
