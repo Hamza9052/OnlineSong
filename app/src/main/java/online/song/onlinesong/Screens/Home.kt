@@ -93,7 +93,7 @@ fun Home(
 
 
 
-    var isLoading = VM.isLoading.observeAsState(Boolean)
+    var isLoading = VM.isLoading.observeAsState(false)
 //    var CatisLoading = VM.CatisLoading.observeAsState(Boolean)
 //    val pop = VM.ListSingerCata.observeAsState(emptyMap<String, List<String>>())
 
@@ -169,28 +169,10 @@ fun Home(
                 .alpha(VisibiltyOfText)
                 .align(alignment = Alignment.Start)
         )
-        val allLoadedState = remember { mutableStateOf(false) }
-
-        // Check if all images are loaded
-        val painters = PlayLists.map { playlistId ->
-            rememberAsyncImagePainter(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(album[playlistId]?.images?.firstOrNull()?.url)
-                    .crossfade(true)
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .size(100) // Target size in pixels
-                    .build()
-            )
-        }
-
-        // Determine if all images are loaded
-        LaunchedEffect(painters) {
-            allLoadedState.value = painters.all { it.state !is AsyncImagePainter.State.Loading }
-        }
 
 
-        if (!allLoadedState.value) {
+
+        if (isLoading.value) {
 
 
                Spacer(modifier = Modifier.weight(1f))
@@ -199,8 +181,7 @@ fun Home(
 
 
 
-        }
-        else {
+        } else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -385,11 +366,7 @@ fun Home(
                                 .size(100) // Specify the target size (in pixels, not dp)
                                 .build()
                         )
-                        if (imagePainter.state is AsyncImagePainter.State.Loading){
-                            Process()
-                        }else{
                             Item2(imagePainter,name,navController, PlayLists[index])
-                        }
 
                     }
 

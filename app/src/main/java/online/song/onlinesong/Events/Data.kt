@@ -51,6 +51,7 @@ data class Image(
 data class TrackDetails(
     val id: String,
     val name: String,
+    val preview_url: String?,
     val duration_ms: Int,  // Track duration in milliseconds
     val artists: List<Artist>,
     val album: Album
