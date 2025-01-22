@@ -1,6 +1,7 @@
 package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,13 +57,12 @@ import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
-
+import androidx.compose.runtime.getValue
 
 @SuppressLint("SuspiciousIndentation", "CoroutineCreationDuringComposition")
 @Composable
 fun listOfSongs(
     navController: NavController,
-    names:String?,
     viewModel: songVM,
     cat:String,
     onClick: ()->Unit
@@ -74,9 +75,11 @@ fun listOfSongs(
 
 
     LaunchedEffect(Unit){
-        viewModel.listSongs(cat, names.toString())
-
+        viewModel.fetchPlaylistTracks(cat)
     }
+    Log.e("Hamza tRack id", "${cat}")
+    val album by viewModel.albumDetails.collectAsState()
+    val track by viewModel.TrackDe.observeAsState(emptyList())
     val scope = rememberCoroutineScope()
     val songs = viewModel.ListSongs.observeAsState(emptyMap<String,List<String>>())
     val totalTime = viewModel.totalTime.observeAsState(emptyMap<String,String>())
@@ -84,7 +87,7 @@ fun listOfSongs(
     val isRefreshing = remember { mutableStateOf(false) }
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
-            .data(viewModel.getImage(names!!,navController.context))
+            .data(album[cat]?.images?.firstOrNull()?.url)
             .crossfade(true)
             .error(R.drawable.error)
             .placeholder(R.drawable.logo)
@@ -138,6 +141,7 @@ fun listOfSongs(
                     ){
                         IconButton(onClick = {
                             navController.navigate(Screen.Home.route)
+                            viewModel.clearTracks()
                         })
                         {
                             Icon(
@@ -163,7 +167,7 @@ fun listOfSongs(
                             )
                             .padding(top = 25.dp, bottom = 6.dp)
                             .padding(horizontal = 16.dp),
-                        text = names,
+                        text = album[cat]?.name ?:"Loading..",
                         color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 20.sp,
                     )
@@ -176,7 +180,7 @@ fun listOfSongs(
                     onRefresh = {
                         isRefreshing.value == true
                         scope.launch{
-                            viewModel.listSongs(cat, names.toString())
+                            viewModel.fetchPlaylistTracks(cat)
                         }
                     },
 
@@ -190,20 +194,28 @@ fun listOfSongs(
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(1)
                         ) {
-                            if (songs.value[names]?.size != null ){
+                            Log.e("Hamza tRack","${track}")
+                            if (track != null ){
                                 items(
-                                    songs.value[names]!!.size
+                                    track.size
                                 ){index->
 
-                                    var name = songs.value[names]?.get(index) ?: "Loading..."
-                                    scope.launch {
-                                        viewModel.T_Time(navController,name)
-                                    }
-                                    var time = if (index < totalTime.value.size && totalTime.value[name] != null) totalTime.value[name] else "00:00"
-
-                                    ItemSong(image,name,onClick,navController,names,
-                                        time.toString(),songs.value[names]
+                                    var name = track[index]?.name ?: "Loading..."
+                                    var pic = track[index]?.album?.images?.firstOrNull()?.url
+                                    val picture = rememberAsyncImagePainter(
+                                        model = ImageRequest.Builder(navController.context)
+                                            .data(pic)
+                                            .crossfade(true)
+                                            .error(R.drawable.error)
+                                            .placeholder(R.drawable.logo)
+                                            .build()
                                     )
+//                                    scope.launch {
+//                                        viewModel.T_Time(navController,name)
+//                                    }
+//                                    var time = if (index < totalTime.value.size && totalTime.value[name] != null) totalTime.value[name] else "00:00"
+                                    val trackId = track[index].id.toString()
+                                    ItemSong(picture,name,navController,cat,trackId)
                                     Spacer(modifier = Modifier.width(8.dp))
                                 }
                             }
@@ -212,7 +224,7 @@ fun listOfSongs(
 
                         }
                     }
-                    if (songs.value[names]?.size == null ){
+                    if (track.size == null){
                         Column(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -245,18 +257,17 @@ fun listOfSongs(
 fun ItemSong(
     image: AsyncImagePainter,
     name: String,
-    onClick: () -> Unit,
     navController: NavController,
-    nameSinger: String,
-    time: String,
-    list: List<String>?
+    playlistId: String,
+    trackId: String,
+
 ){
-    val jsonList = Gson().toJson(list)
+//    val jsonList = Gson().toJson(list)
     Box(
         modifier = Modifier
             .clickable(onClick = {
-                navController.navigate("ScreenPlay/$name/$nameSinger/$jsonList")
-                onClick()
+                navController.navigate("ScreenPlay/$playlistId/$trackId")
+
             })
             .background(color = colorResource(R.color.background))
             .fillMaxWidth()
@@ -286,7 +297,7 @@ fun ItemSong(
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = time,
+                text = "00:00",
                 textAlign = TextAlign.Center,
                 color = colorResource(R.color.unfocus),
                 fontSize = 14.sp,
