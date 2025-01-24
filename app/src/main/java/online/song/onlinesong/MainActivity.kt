@@ -1,6 +1,8 @@
 package online.song.onlinesong
 
 
+import android.app.ComponentCaller
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -42,6 +44,8 @@ import com.google.gson.reflect.TypeToken
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector
 import com.spotify.android.appremote.api.SpotifyAppRemote
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationResponse
 import kotlinx.coroutines.launch
 import online.song.onlinesong.BottomBar.bottomBar
 import online.song.onlinesong.LoginWithGoogle.GoogleAuthUiClient
@@ -51,11 +55,12 @@ import online.song.onlinesong.Screens.Screen
 import online.song.onlinesong.Screens.Search
 import online.song.onlinesong.Screens.listOfSongs
 import online.song.onlinesong.Screens.playSong
+import online.song.onlinesong.Screens.testScreen
 import online.song.onlinesong.ViewModel.SongViewModelFactory
 import online.song.onlinesong.ViewModel.songVM
 import online.song.onlinesong.itemList.bottomIcons
 import online.song.onlinesong.ui.theme.OnlineSongTheme
-
+private const val AUTH_REQUEST_CODE = 1337
 class MainActivity : ComponentActivity() {
     private lateinit var VM: songVM
     private var spotifyAppRemote: SpotifyAppRemote? = null
@@ -227,7 +232,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable(
-                                "list/{singerName}/{cat}",
+                                "list/{cat}",
                                 enterTransition = {
                                     slideInHorizontally(
                                         initialOffsetX = { 1000 },
@@ -241,16 +246,16 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             ){backStackEntry->
-                                val singerName =backStackEntry.arguments?.getString("singerName")?:"Loading..."
+
                                 val cat =backStackEntry.arguments?.getString("cat")?:"Loading..."
                                 listOfSongs(
-                                    navController, singerName, VM, cat,
+                                    navController, VM, cat,
                                     onClick = {}
                                 )
 
                             }
                             composable(
-                                "ScreenPlay/{name}/{singerName}/{list}",
+                                "ScreenPlay/{playlistId}/{trackId}",
                                 enterTransition = {
                                     slideInVertically(
                                         initialOffsetY = { it },
@@ -270,16 +275,13 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             ){backStackEntry->
-                                val singerName =backStackEntry.arguments?.getString("singerName")?:"Loading..."
-                                val name =backStackEntry.arguments?.getString("name")?:"Loading..."
-                                val serializedList = backStackEntry.arguments?.getString("list")?:"Loading..."
-                                val list:List<String> = Gson().fromJson(serializedList,object : TypeToken<List<String>>() {}.type)
+                                val playlistId =backStackEntry.arguments?.getString("playlistId")?:"Loading..."
+                                val trackId =backStackEntry.arguments?.getString("trackId")?:"Loading..."
                                 playSong(
                                     VM,
                                     navController,
-                                    singerName,
-                                    name,
-                                    list,
+                                    playlistId,
+                                    trackId,
                                      googleAuthUiClient.getSignedInUser()
                                 )
 
@@ -291,24 +293,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        SpotifyAppRemote.connect(
-            this,
-            ConnectionParams.Builder("0102b15d08e642e884897fa1b5bb3223")
-                .setRedirectUri("http://localhost:8888/callback")
-                .showAuthView(true)
-                .build(),
-            object: Connector.ConnectionListener{
-                override fun onConnected(appRemote: SpotifyAppRemote?) {
-                    spotifyAppRemote = appRemote
-                    Log.d("Spotify", "Connected to Spotify")
-                }
 
-                override fun onFailure(throwable: Throwable?) {
-                    Log.e("Spotify", "Failed to connect to Spotify", throwable)
-                }
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+    }
+     fun connected(trackid:String) {
+        spotifyAppRemote?.let {
+            // Play a playlist
+            val playlistURI = "spotify:track:$trackid"
+            it.playerApi.play(playlistURI)
+            // Subscribe to PlayerState
+            it.playerApi.subscribeToPlayerState().setEventCallback {
 
             }
-        )
+        }
+
     }
 
     override fun onStop() {
@@ -318,7 +320,6 @@ class MainActivity : ComponentActivity() {
 
 
 }
-
 
 
 

@@ -24,7 +24,8 @@ data class Track(
     val name: String,                   // Track name
     val preview_url: String?,           // URL to a 30-second preview of the track
     val album: Album,                   // Album details
-    val artists: List<Artist>           // List of artists for the track
+    val artists: List<Artist>,        // List of artists for the track
+    val TrackDetail:TrackDetails
 )
 
 

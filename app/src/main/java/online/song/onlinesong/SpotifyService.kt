@@ -5,6 +5,8 @@ import okhttp3.logging.HttpLoggingInterceptor
 import online.song.onlinesong.Events.Playlist
 import online.song.onlinesong.Events.Track
 import online.song.onlinesong.Events.TrackDetails
+import online.song.onlinesong.Events.Album
+import online.song.onlinesong.Events.PlaylistTracks
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -20,12 +22,17 @@ interface SpotifyService {
         @Header("Authorization") authorization: String
     ): Response<List<Playlist>>
 
+    @GET("v1/playlists/{playlist_id}")
+    suspend fun getPlaylists(
+        @Header("Authorization") authorization: String,
+        @Path("playlist_id") playlistId: String
+    ): Response<Playlist>
     // Fetch tracks from a specific playlist
     @GET("v1/playlists/{playlist_id}/tracks")
     suspend fun getPlaylistTracks(
         @Header("Authorization") authorization: String,
         @Path("playlist_id") playlistId: String
-    ): Response<List<Track>>
+    ): Response<PlaylistTracks>
 
     // Fetch track details (e.g., duration, name, etc.)
     @GET("v1/tracks/{track_id}")
@@ -34,6 +41,11 @@ interface SpotifyService {
         @Path("track_id") trackId: String
     ): Response<TrackDetails>
 
+    @GET("v1/albums/{album_id}")
+    suspend fun getAlbumDetails(
+        @Header("Authorization") authorization: String,
+        @Path("album_id") albumId: String
+    ): Response<Album>
     // Add more API calls as needed (e.g., search, get album details, etc.)
 
     companion object {
