@@ -111,7 +111,7 @@ fun testScreen(
 
     val image = rememberAsyncImagePainter(
         model = ImageRequest.Builder(navController.context)
-            .data(viewModel.getImage("",navController.context))
+            .data("")
             .crossfade(true)
             .error(R.drawable.error)
             .placeholder(R.drawable.logo)
