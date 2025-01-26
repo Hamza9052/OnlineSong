@@ -58,8 +58,10 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import online.song.onlinesong.Events.SongEvent
+import online.song.onlinesong.Events.TrackDetails
 import online.song.onlinesong.LoginWithGoogle.UserData
 import online.song.onlinesong.R
+import online.song.onlinesong.Service.Util
 import online.song.onlinesong.ViewModel.songVM
 
 
@@ -69,21 +71,31 @@ import online.song.onlinesong.ViewModel.songVM
 fun Favorite(
     navController: NavController,
     userData: UserData?,
-    viewModel: songVM
-){
-    val songs = viewModel.listOfFavorite.observeAsState(emptyMap<String,String>())
+    viewModel: songVM,
+) {
+    val songs = viewModel.listOfFavorite.observeAsState(emptyMap<String, String>())
+    val track = viewModel.TrackFavorite.observeAsState(emptyList<TrackDetails>())
     val scope = rememberCoroutineScope()
-    val isRefreshing = remember {mutableStateOf(false) }
-    val isFavoriteLoading = viewModel.isFavoriteLoading.observeAsState(Boolean)
+    val isRefreshing = remember { mutableStateOf(false) }
+    val isFavoriteLoading = viewModel.isFavoriteLoading.observeAsState(false)
 
 
     val list = remember { mutableListOf<String>() }
 
     LaunchedEffect(userData) {
-        viewModel.Action(SongEvent.CheckFavoriteSong(userData!!),navController.context)
+        viewModel.Action(SongEvent.CheckFavoriteSong(userData!!), navController.context)
+    }
+
+    if (songs.value.isNotEmpty()) {
+        for (i in 0 until songs.value.size) {
+            val name = songs.value.keys.toList()[i]
+            val id = songs.value[name]
+            viewModel.fetchFavoriteTrack(id!!)
+        }
+
     }
     Scaffold(
-         topBar = {
+        topBar = {
             CenterAlignedTopAppBar(
 
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -101,11 +113,11 @@ fun Favorite(
                 },
 
 
-            )
+                )
         }
-    ){ padding->
+    ) { padding ->
 
-        Column (
+        Column(
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth()
@@ -113,7 +125,7 @@ fun Favorite(
                 .padding(padding), // Ensure padding is applied here
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
-        ){
+        ) {
 
             SwipeRefresh(
                 modifier = Modifier
@@ -122,42 +134,46 @@ fun Favorite(
                 state = rememberSwipeRefreshState(isRefreshing.value),
                 onRefresh = {
                     isRefreshing.value == true
-                    scope.launch{
-                        viewModel.Action(SongEvent.CheckFavoriteSong(userData!!),navController.context)
+                    scope.launch {
+                        viewModel.Action(
+                            SongEvent.CheckFavoriteSong(userData!!),
+                            navController.context
+                        )
                     }
                 }) {
 
                 if (isFavoriteLoading.value == true) {
                     // Show a loading indicator
                     Process()
-                }else{
+                } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        Log.e("test list ", "Favorite: ${songs.value.size}" )
+                        Log.e("test list ", "Favorite: ${track.value.size}")
                         items(
                             songs.value.size,
-                            key = {index->
+                            key = { index ->
                                 songs.value.keys.toList()[index]
 
                             }
-                        ){index->
-                            val name = songs.value.keys.toList()[index]
-                            val nameSong = songs.value[name]
+                        ) { index ->
 
-                                if (nameSong.toString() !in list) {
-                                    list.add(nameSong.toString())
-                                }
+                            val name = songs.value.keys.toList()[index]
+                            val nameSong = track.value[index].name ?: "laoding.."
+                            val url =
+                                track.value[index].album.images.firstOrNull()?.url ?: "laoding.."
 
                             val image = rememberAsyncImagePainter(
                                 model = ImageRequest.Builder(navController.context)
-                                    .data(viewModel.getImage(name,navController.context))
+                                    .data(url)
                                     .crossfade(true)
                                     .error(R.drawable.error)
                                     .placeholder(R.drawable.logo)
                                     .build()
                             )
-                            Item(image, nameSong.toString(),navController,name,list)
+                            Item(image, nameSong, navController, name)
+
+
                         }
                     }
                 }
@@ -168,24 +184,23 @@ fun Favorite(
 }
 
 
-
 @Composable
 fun Item(
     image: AsyncImagePainter,
     name: String,
     navController: NavController,
-    nameSinger:String,
-    cat: List<String>
-){
-    cat.forEach{name ->
-        Log.e("list songs","$name")
-    }
+    nameSinger: String,
+//    cat: List<String>
+) {
+//    cat.forEach{name ->
+//        Log.e("list songs","$name")
+//    }
 
-    val jsonLis = Gson().toJson(cat)
+//    val jsonLis = Gson().toJson(cat)
     Box(
         modifier = Modifier
             .clickable(onClick = {
-                navController.navigate("ScreenPlay/$name/$nameSinger/$jsonLis")
+                navController.navigate("ScreenPlay/$name/$nameSinger")
 //                onClick()
             })
             .background(color = colorResource(R.color.background))
