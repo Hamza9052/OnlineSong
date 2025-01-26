@@ -1,6 +1,7 @@
 package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -68,11 +69,20 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.spotify.android.appremote.api.ConnectionParams
+import com.spotify.android.appremote.api.Connector
+import com.spotify.android.appremote.api.SpotifyAppRemote
+import com.spotify.sdk.android.auth.AccountsQueryParameters.CLIENT_ID
+import com.spotify.sdk.android.auth.AccountsQueryParameters.REDIRECT_URI
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
+import com.spotify.sdk.android.auth.BuildConfig
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
-
+private const val AUTH_REQUEST_CODE = 1337
 @SuppressLint("CoroutineCreationDuringComposition", "RememberReturnType")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,6 +132,7 @@ fun testScreen(
     }
 
 
+    lateinit var spotifyAppRemote: SpotifyAppRemote
 
 
 
@@ -360,14 +371,33 @@ fun testScreen(
                 Button(
                     onClick = {
 
-                        if (exoPlayer.isPlaying) {
-                            exoPlayer.pause() // Pause playback
-                            isPlaying.value = false
-                        } else {
-                            exoPlayer.play() // Resume or start playback
-                            isPlaying.value = true
-                        }
+//                        if (exoPlayer.isPlaying) {
+//                            exoPlayer.pause() // Pause playback
+//                            isPlaying.value = false
+//                        } else {
+//                            exoPlayer.play() // Resume or start playback
+//                            isPlaying.value = true
+//                        }
 
+                        SpotifyAppRemote.connect(
+                            navController.context,
+                            ConnectionParams.Builder("0102b15d08e642e884897fa1b5bb3223")
+                                .setRedirectUri("http://localhost:8888/callback")
+                                .showAuthView(true)
+                                .build(),
+                            object: Connector.ConnectionListener{
+                                override fun onConnected(appRemote: SpotifyAppRemote?) {
+                                    spotifyAppRemote = appRemote!!
+                                    Log.d("Spotify", "Connected to Spotify")
+                                    appRemote.playerApi.play("spotify:track:4uLU6hMCjMI75M1A2tKUQ")
+                                }
+
+                                override fun onFailure(throwable: Throwable?) {
+                                    Log.e("Spotify", "Failed to connect to Spotify", throwable)
+                                }
+
+                            }
+                            )
                         // Update the state to reflect the current playback state
 
 

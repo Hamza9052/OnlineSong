@@ -1,6 +1,7 @@
 package online.song.onlinesong.Screens
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -9,13 +10,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,6 +39,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,13 +48,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
+import online.song.onlinesong.Events.MusicData
 
 import online.song.onlinesong.R
 import online.song.onlinesong.ViewModel.songVM
@@ -59,6 +71,9 @@ fun Search(
     VM: songVM
 ){
     val active by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        VM.fetchTracksAsync()
+    }
     Column (
         modifier = Modifier
             .fillMaxSize()
@@ -82,7 +97,8 @@ fun Searchbar(
     navController: NavController,
 //    click:()->Unit
 ) {
-//    val data = dataSong()
+    var search by remember { mutableStateOf(MusicData().Search) }
+
     var actives by remember { mutableStateOf(active) }
 //    var search by remember { mutableStateOf(data.search) }
 
@@ -113,7 +129,7 @@ fun Searchbar(
     ) {
 
         SearchBar(
-            query = "search",
+            query = search,
             modifier = Modifier
                 .weight(1f)
                 .padding(end = if (actives) 0.dp else 14.dp , start = if (actives) 0.dp else 14.dp)
@@ -128,8 +144,10 @@ fun Searchbar(
                     focusedTextColor = Color.White,
                 )
             ),
-            onQueryChange = { "search = it "},
-            onSearch = {},
+            onQueryChange = { search= it },
+            onSearch = {
+
+            },
             active = actives,
             onActiveChange = { actives = it },
             placeholder = {
@@ -154,7 +172,10 @@ fun Searchbar(
                         )
                     ) {
                         IconButton(
-                            onClick = { actives = false }
+                            onClick = {
+                                actives = false
+
+                            }
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.ArrowBack,
@@ -166,7 +187,7 @@ fun Searchbar(
                     }
                 }
                 else{
-                   ""
+                    search = ""
                 }
             },
             trailingIcon = {
@@ -194,13 +215,39 @@ fun Searchbar(
             },
 
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(colorResource(R.color.background))
-            ) {
 
-            }
+                val tracks = viewModel.TrackSearch.observeAsState()
+
+                val size = tracks.value!!.size
+                Log.e("searchTrac","$size => ${search.lowercase()}")
+                for (i in 0 until size) {
+                    val track = tracks.value!![i]
+                     val name =  track.name.lowercase()
+
+                    if (name.contains(search.lowercase()) && search.isNotEmpty()) {
+                        Log.e("searchTrac","$name => ${search.lowercase()}")
+                        LazyColumn {
+                            item(6){
+                                val pic = track.album.images.firstOrNull()?.url
+                                val picture = rememberAsyncImagePainter(
+                                    model = ImageRequest.Builder(navController.context)
+                                        .data(pic)
+                                        .crossfade(true)
+                                        .error(R.drawable.error)
+                                        .placeholder(R.drawable.logo)
+                                        .build()
+                                )
+
+                                itemSong(picture,track.name)
+                            }
+                        }
+
+                    }
+                    if ( (i-1).equals(size)){
+                        break
+                    }
+                }
+
         }
 }
 
@@ -233,3 +280,59 @@ fun searchName(
         )
     }
 }}
+
+@Composable
+fun itemSong(
+    image: AsyncImagePainter,
+    name: String,
+//    navController: NavController,
+//    playlistId: String,
+//    trackId: String,
+
+    ){
+//    val jsonList = Gson().toJson(list)
+    Box(
+        modifier = Modifier
+            .clickable(onClick = {
+//                navController.navigate("ScreenPlay/$trackId")
+
+            })
+            .background(color = colorResource(R.color.background))
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .height(80.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceAround,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Image(
+                painter = image,
+                contentDescription = "Image",
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(color = Color.Transparent)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+            Spacer(modifier = Modifier.weight(0.1f))
+            Text(
+                text = name,
+                textAlign = TextAlign.Center,
+                color = colorResource(R.color.unfocus),
+                fontSize = 18.sp,
+                fontFamily = FontFamily.Monospace
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "00:00",
+                textAlign = TextAlign.Center,
+                color = colorResource(R.color.unfocus),
+                fontSize = 14.sp,
+                fontFamily = FontFamily.Monospace
+            )
+        }
+    }
+
+}

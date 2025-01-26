@@ -3,4 +3,7 @@
     <string name="Web_client_ID">586542256466-ch1q8a4ku4j2maflu46esufqho0btr2b.apps.googleusercontent.com</string>
     <string name="media_notification_channel">Media Notification Channel</string>
     <string name="media_notification_channel_description">Media Notification Channel Description</string>
+    <string name="SPOTIFY_CLIENT_ID">0102b15d08e642e884897fa1b5bb3223</string>
+    <string name="SPOTIFY_CLIENT_SECRET">cfb60949e6ab4231abb69cfcffce642a</string>
+    <string name="Redirect_Uri">http://localhost:8888/callback</string>
 </resources>
