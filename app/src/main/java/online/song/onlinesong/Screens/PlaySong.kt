@@ -230,13 +230,13 @@ LaunchedEffect(Unit) {
                 actions = {
 
                     IconButton(onClick = {
-//                        viewModel.Action(
-//                            SongEvent.Favorit(
-//                                list[o.intValue],
-//                                userData!!,
-//                                name
-//                            ), navController.context
-//                        )
+                        viewModel.Action(
+                            SongEvent.Favorit(
+                                Track.firstOrNull()?.id?:"",
+                                userData!!,
+                                Track.firstOrNull()?.artists?.firstOrNull()?.name?:""
+                            ), navController.context
+                        )
                     }) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
