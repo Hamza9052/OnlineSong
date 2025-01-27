@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import androidx.compose.ui.res.colorResource
+import androidx.core.app.NotificationCompat
 import androidx.media3.common.Player
 
 import androidx.media3.session.MediaController
@@ -61,6 +62,7 @@ class MediaNotificationManager(
                 setUseRewindActionInCompactView(true)
                 setUseFastForwardActionInCompactView(true)
             }
+
 
     }
 
